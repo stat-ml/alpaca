@@ -4,15 +4,34 @@ from dataloader.rosen import RosenData
 
 
 def main(config):
-    X_train, y_train, X_val, y_val, _, _, X_pool, y_pool = RosenData(
-        config['n_train'], config['n_val'], config['n_test'], config['n_pool'], config['n_dim']
-    ).dataset(use_cache=config['use_cache'])
+    rosen = RosenData(10, 2000, data_split=[0.1, 0.05, 0.05, 0.8], use_cache=True, rewrite=True)
+    loader = rosen.loader('pool')
 
-    model = MLP(config['n_dim'])
+    x, y = next(iter(loader))
+    print(x.shape)
 
-    model.fit(
-        X_train, y_train, batch_size=64, epochs=config['epochs'],
-        validation_data=[X_val, y_val])
+    # pass
+    # train_set, val_set, test_est, pool_set =
+    # train_loader, val_loader, _, pool_loader = Rosen_data
+    # X_train, y_train, X_val, y_val, _, _, X_pool, y_pool = RosenData(
+    #     config['n_train'], config['n_val'], config['n_test'], config['n_pool'], config['n_dim']
+    # ).dataset(use_cache=config['use_cache'])
+    #
+    # layers = [10, 128, 64, 32, 1]
+    # model = MLP(layers)
+    #
+    # # model.fit()
+
+
+
+
+
+
+    # model = MLP(config['n_dim'])
+    #
+    # model.fit(
+    #     X_train, y_train, batch_size=64, epochs=config['epochs'],
+    #     validation_data=[X_val, y_val])
 
 
 def parse_arguments():

@@ -25,9 +25,7 @@ class MLP(nn.Module):
 
     def fit(self, train_loader, val_loader, learning_rate=0.001, epochs=10):
         print('start fitting')
-        # Loss and optimizer
         optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
-
 
         # Train the model
         for epoch in range(epochs):

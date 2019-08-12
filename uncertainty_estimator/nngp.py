@@ -1,5 +1,13 @@
-import tensorflow as tf
+# import tensorflow as tf
 import numpy as np
+
+
+class NNGP:
+    def __init__(self):
+        pass
+
+    def estimate(self, X_pool, X_train, y_train):
+        pass
 
 
 class NNGP:
