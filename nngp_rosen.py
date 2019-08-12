@@ -4,34 +4,17 @@ from dataloader.rosen import RosenData
 
 
 def main(config):
-    rosen = RosenData(10, 2000, data_split=[0.1, 0.05, 0.05, 0.8], use_cache=True, rewrite=True)
-    loader = rosen.loader('pool')
+    rosen = RosenData(
+        config['n_dim'], config['data_size'], config['data_split'],
+        use_cache=config['use_cache'])
+    train_set = rosen.dataset('train')
+    val_set = rosen.dataset('train')
+    pool_set = rosen.dataset('pool')
 
-    x, y = next(iter(loader))
-    print(x.shape)
+    model = MLP(config['layers'])
+    model.fit(train_set, val_set, epochs=config['epochs'])
 
-    # pass
-    # train_set, val_set, test_est, pool_set =
-    # train_loader, val_loader, _, pool_loader = Rosen_data
-    # X_train, y_train, X_val, y_val, _, _, X_pool, y_pool = RosenData(
-    #     config['n_train'], config['n_val'], config['n_test'], config['n_pool'], config['n_dim']
-    # ).dataset(use_cache=config['use_cache'])
-    #
-    # layers = [10, 128, 64, 32, 1]
-    # model = MLP(layers)
-    #
-    # # model.fit()
-
-
-
-
-
-
-    # model = MLP(config['n_dim'])
-    #
-    # model.fit(
-    #     X_train, y_train, batch_size=64, epochs=config['epochs'],
-    #     validation_data=[X_val, y_val])
+    print(model.evaluate(pool_set))
 
 
 def parse_arguments():
@@ -45,15 +28,11 @@ def parse_arguments():
     parser.add_argument(
         '--n-dim', type=int, default=10, help='Rosenbrock function dimentions')
     parser.add_argument(
-        '--n-train', type=int, default=200, help='Initial size of train dataset')
+        '--data-size', type=int, default=2000, help='Size of dataset')
     parser.add_argument(
-        '--n-val', type=int, default=200, help='Initial size of validation dataset')
+        '--data-split', type=int, default=[0.1, 0.05, 0.05, 0.8], help='Size of dataset')
     parser.add_argument(
-        '--n-test', type=int, default=200, help='Initial size of test dataset')
-    parser.add_argument(
-        '--n-pool', type=int, default=1000, help='Initial size of test dataset')
-    parser.add_argument(
-        '--epochs', type=int, default=10000, help='Initial size of test dataset')
+        '--epochs', '-e', type=int, default=10000, help='Initial size of test dataset')
     parser.add_argument(
         '--update-size', type=int, default=100,
         help='Amount of samples to take from pool per iteration')
@@ -64,7 +43,7 @@ def parse_arguments():
         '--no-use-cache', dest='use_cache', action='store_false',
         help='To generate new sample points for rosenbrock function')
     parser.add_argument(
-        '--layers', type=int, nargs='+', default=[128, 64, 32],
+        '--layers', type=int, nargs='+', default=[10, 128, 64, 32, 1],
         help='Size of the layers in neural net')
 
     return vars(parser.parse_args())

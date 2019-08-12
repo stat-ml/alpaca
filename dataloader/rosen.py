@@ -3,9 +3,6 @@ import os.path as path
 
 from scipy.optimize import rosen
 import numpy as np
-import torch
-
-from .custom_dataset import CustomDataset
 
 
 class RosenData:
@@ -29,14 +26,6 @@ class RosenData:
         assert label in ['train', 'val', 'test', 'pool']
         index = self.splits[label]
         return self.x_set[index[0]:index[1]], self.y_set[index[0]:index[1]]
-
-    def loader(self, label, batch_size=64, shuffle=False):
-        custom_dataset = CustomDataset(*self.dataset(label))
-
-        loader = torch.utils.data.DataLoader(
-            dataset=custom_dataset, batch_size=batch_size, shuffle=shuffle)
-
-        return loader
 
     def _build_set(self, use_cache, rewrite):
         if use_cache:

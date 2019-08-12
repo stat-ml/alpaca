@@ -2,20 +2,26 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from dataloader.custom_dataset import loader
+
 
 class MLP(nn.Module):
     def __init__(self, layer_sizes):
         super(MLP, self).__init__()
 
         self.device = 'gpu' if torch.cuda.is_available() else 'cpu'
-        self.criterion = nn.CrossEntropyLoss()
+        # self.criterion = nn.CrossEntropyLoss()
+        self.criterion = nn.MSELoss()
 
         self.layer_sizes = layer_sizes
         self.fcs = []
         for i, layer in enumerate(layer_sizes[:-1]):
-            self.fc = nn.Linear(layer, layer_sizes[i+1])  # we use self to register as torch parameter
-            self.fcs.append(self.fc)
+            fc = nn.Linear(layer, layer_sizes[i+1])
+            setattr(self, 'fc'+str(i), fc)  # to register params
+            self.fcs.append(fc)
         self.relu = nn.ReLU()
+
+        self.double()
 
     def forward(self, x, dropout=True):
         out = x
@@ -23,13 +29,14 @@ class MLP(nn.Module):
             out = self.relu(fc(out))
         return out
 
-    def fit(self, train_loader, val_loader, learning_rate=0.001, epochs=10):
-        print('start fitting')
+    def fit(self, train_set, val_set, learning_rate=0.001, epochs=10):
+        train_loader = loader(*train_set)
+
         optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
 
         # Train the model
         for epoch in range(epochs):
-            for i, (images, labels) in enumerate(train_loader):
+            for images, labels in train_loader:
                 # Move tensors to the configured device
                 images = images.reshape(-1, self.layer_sizes[0]).to(self.device)
                 labels = labels.to(self.device)
@@ -43,31 +50,25 @@ class MLP(nn.Module):
                 loss.backward()
                 optimizer.step()
 
-                if (i + 1) % 100 == 0:
-                    val_loss, _ = self.evaluate(val_loader)
-                    self._print_status(epoch, epochs, i, loss.item(), val_loss)
+            if (epoch + 1) % 50 == 0:
+                val_loss = self.evaluate(val_set)
+                self._print_status(epoch, epochs, loss.item(), val_loss)
 
-    def evaluate(self, loader):
+    def evaluate(self, dataset):
+        data_loader = loader(*dataset)
         """
-        Return model losses and accuracy for provided data loader
+        Return model losses for provided data loader
         """
         with torch.no_grad():
-            correct = 0
-            total = 0
             losses = []
-            for images, labels in loader:
+            for images, labels in data_loader:
                 images = images.reshape(-1, self.layer_sizes[0]).to(self.device)
                 labels = labels.to(self.device)
                 outputs = self(images)
                 losses.append(self.criterion(outputs, labels).item())
-                _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
 
-        return sum(losses)/len(losses), correct/total
+        return sum(losses)/len(losses)
 
-
-
-    def _print_status(self, epoch, epochs, i, loss, val_loss):
-        print('Epoch [{}/{}], Step [{}], Loss: {:.4f}, Validation loss: {:.4f}'
-              .format(epoch + 1, epochs, i + 1, loss, val_loss))
+    def _print_status(self, epoch, epochs, loss, val_loss):
+        print('Epoch [{}/{}], Loss: {:.4f}, Validation loss: {:.4f}'
+              .format(epoch + 1, epochs, loss, val_loss))
