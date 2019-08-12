@@ -22,12 +22,20 @@ class MLP(nn.Module):
         self.relu = nn.ReLU()
 
         self.double()
+        self.to(self.device)
 
-    def forward(self, x, dropout=True):
+    def forward(self, x):
         out = x
         for fc in self.fcs:
             out = self.relu(fc(out))
         return out
+
+    def predict(self, x, dropout_rate=0.5):
+        out = torch.DoubleTensor(x)
+        for fc in self.fcs:
+            out = self.relu(fc(out))
+            out = nn.Dropout(dropout_rate)(out)
+        return out.detach()
 
     def fit(self, train_set, val_set, learning_rate=0.001, epochs=10):
         train_loader = loader(*train_set)

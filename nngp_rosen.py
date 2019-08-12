@@ -1,20 +1,41 @@
 import argparse
+
+import torch
+
 from model.mlp import MLP
 from dataloader.rosen import RosenData
+from uncertainty_estimator.mcdue import MCDUE
 
 
 def main(config):
     rosen = RosenData(
         config['n_dim'], config['data_size'], config['data_split'],
         use_cache=config['use_cache'])
-    train_set = rosen.dataset('train')
-    val_set = rosen.dataset('train')
-    pool_set = rosen.dataset('pool')
+    x_train, y_train = rosen.dataset('train')
+    x_val, y_val = rosen.dataset('train')
+    x_pool, y_pool = rosen.dataset('pool')
 
     model = MLP(config['layers'])
-    model.fit(train_set, val_set, epochs=config['epochs'])
+    estimator = MCDUE(model, 25)
 
-    print(model.evaluate(pool_set))
+    # # Training the model
+    # model.fit((x_train, y_train), (x_val, y_val), epochs=config['epochs'])
+    # torch.save(model.state_dict(), 'model/data/mlp_rosen.ckpt')
+    # print(model.evaluate(pool_set))
+
+    model.load_state_dict(torch.load('model/data/mlp_rosen.ckpt'))
+    print(model.predict(x_pool[:1]))
+    #
+    print(estimator.estimate(x_pool, x_train, y_train))
+
+
+
+
+
+
+
+
+
 
 
 def parse_arguments():
