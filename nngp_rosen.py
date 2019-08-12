@@ -5,6 +5,7 @@ import torch
 from model.mlp import MLP
 from dataloader.rosen import RosenData
 from uncertainty_estimator.mcdue import MCDUE
+from uncertainty_estimator.nngp import NNGPRegression
 
 
 def main(config):
@@ -16,7 +17,8 @@ def main(config):
     x_pool, y_pool = rosen.dataset('pool')
 
     model = MLP(config['layers'])
-    estimator = MCDUE(model, 25)
+    # estimator = MCDUE(model, 25)
+    estimator = NNGPRegression(model, 25)
 
     # # Training the model
     # model.fit((x_train, y_train), (x_val, y_val), epochs=config['epochs'])
@@ -25,17 +27,8 @@ def main(config):
 
     model.load_state_dict(torch.load('model/data/mlp_rosen.ckpt'))
     print(model.predict(x_pool[:1]))
-    #
-    print(estimator.estimate(x_pool, x_train, y_train))
-
-
-
-
-
-
-
-
-
+    uq = estimator.estimate(x_pool, x_train, y_train)
+    print(uq.shape)
 
 
 def parse_arguments():
