@@ -20,9 +20,10 @@ class NNGPRegression:
         cov_matrix_train = np.cov(mcd_predictions[:train_len, :], ddof=0)
         cov_matrix_inv = np.linalg.inv(cov_matrix_train + np.eye(train_len)*self.diag_eps)
 
-        Qs = self.simple_covs(mcd_predictions[:train_len, :], mcd_predictions).T
+        pool_samples = mcd_predictions[train_len:]
+        Qs = self.simple_covs(mcd_predictions[:train_len, :], pool_samples).T
         Qt_K_Q = np.matmul(np.matmul(Qs.T, cov_matrix_inv), Qs)
-        KKs = np.var(mcd_predictions, axis=1)
+        KKs = np.var(pool_samples, axis=1)
 
         ws = np.diag(KKs - Qt_K_Q)
 
@@ -32,7 +33,7 @@ class NNGPRegression:
     def _mcd_predict(self, train_pool_samples):
         mcd_predictions = np.zeros((train_pool_samples.shape[0], self.nn_runs))
         for nn_run in range(self.nn_runs):
-            prediction = self.net.predict(train_pool_samples, dropout_rate=self.dropout_rate)
+            prediction = self.net(train_pool_samples, dropout_rate=self.dropout_rate)
             mcd_predictions[:, nn_run] = np.ravel(prediction)
         return mcd_predictions
 

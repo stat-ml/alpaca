@@ -14,7 +14,7 @@ class MCDUE:
         mcd_realizations = np.zeros((X_pool.shape[0], self.nn_runs))
 
         for nn_run in range(self.nn_runs):
-            prediction = self.net.predict(X_pool, dropout_rate=self.dropout_rate)
+            prediction = self.net(X_pool, dropout_rate=self.dropout_rate)
             mcd_realizations[:, nn_run] = np.ravel(prediction)
 
         return np.ravel(np.std(mcd_realizations, axis=1))

@@ -10,7 +10,6 @@ class MLP(nn.Module):
         super(MLP, self).__init__()
 
         self.device = 'gpu' if torch.cuda.is_available() else 'cpu'
-        # self.criterion = nn.CrossEntropyLoss()
         self.criterion = nn.MSELoss()
 
         self.layer_sizes = layer_sizes
@@ -24,33 +23,27 @@ class MLP(nn.Module):
         self.double()
         self.to(self.device)
 
-    def forward(self, x):
-        out = x
-        for fc in self.fcs:
-            out = self.relu(fc(out))
-        return out
-
-    def predict(self, x, dropout_rate=0.5):
+    def forward(self, x, dropout_rate=0, train=False):
         out = torch.DoubleTensor(x)
         for fc in self.fcs:
             out = self.relu(fc(out))
             out = nn.Dropout(dropout_rate)(out)
-        return out.detach()
+        return out if train else out.detach()
 
-    def fit(self, train_set, val_set, learning_rate=0.001, epochs=10):
+    def fit(self, train_set, val_set, learning_rate=0.001, epochs=1000, verbose=True):
         train_loader = loader(*train_set)
 
         optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
 
         # Train the model
         for epoch in range(epochs):
-            for images, labels in train_loader:
+            for points, labels in train_loader:
                 # Move tensors to the configured device
-                images = images.reshape(-1, self.layer_sizes[0]).to(self.device)
+                points = points.reshape(-1, self.layer_sizes[0]).to(self.device)
                 labels = labels.to(self.device)
 
                 # Forward pass
-                outputs = self(images, False)
+                outputs = self(points, train=True)
                 loss = self.criterion(outputs, labels)
 
                 # Backward and optimize
@@ -58,7 +51,7 @@ class MLP(nn.Module):
                 loss.backward()
                 optimizer.step()
 
-            if (epoch + 1) % 50 == 0:
+            if (epoch + 1) % 50 == 0 and verbose:
                 val_loss = self.evaluate(val_set)
                 self._print_status(epoch, epochs, loss.item(), val_loss)
 
@@ -69,10 +62,10 @@ class MLP(nn.Module):
         """
         with torch.no_grad():
             losses = []
-            for images, labels in data_loader:
-                images = images.reshape(-1, self.layer_sizes[0]).to(self.device)
+            for points, labels in data_loader:
+                points = points.reshape(-1, self.layer_sizes[0]).to(self.device)
                 labels = labels.to(self.device)
-                outputs = self(images)
+                outputs = self(points)
                 losses.append(self.criterion(outputs, labels).item())
 
         return sum(losses)/len(losses)

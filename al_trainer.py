@@ -18,16 +18,16 @@ class ALTrainer:
         self.update_size = update_size
         self.verbose = verbose
 
-    def train(self, X_train, y_train, X_val, y_val, X_pool):
-        self.model.train(X_train, y_train, X_val, y_val, verbose=self.verbose)
+    def train(self, x_train, y_train, x_val, y_val, x_pool):
+        self.model.fit((x_train, y_train), (x_val, y_val), verbose=self.verbose)
 
-        rmses = [self._rmse(X_val, y_val)]
+        rmses = [self._rmse(x_val, y_val)]
 
         for al_iteration in range(1, self.iterations + 1):
             # update pool
-            uncertainties = self.estimator.estimate(X_pool, X_train, y_train)
-            X_train, y_train, X_pool = self.sampler.update_sets(
-                X_train, y_train, X_pool, uncertainties, self.update_size, self.oracle
+            uncertainties = self.estimator.estimate(x_pool, x_train, y_train)
+            x_train, y_train, x_pool = self.sampler.update_sets(
+                x_train, y_train, x_pool, uncertainties, self.update_size, self.oracle
             )
             if self.verbose:
                 print('Uncertainties', uncertainties[:20])
@@ -35,12 +35,12 @@ class ALTrainer:
             print("Iteration", al_iteration)
 
             # retrain net
-            self.model.train(X_train, y_train, X_val, y_val, verbose=self.verbose)
-            rmse = self._rmse(X_val, y_val)
+            self.model.fit((x_train, y_train), (x_val, y_val), verbose=self.verbose)
+            rmse = self._rmse(x_val, y_val)
             print('Validation RMSE after training: %.3f' % rmse)
             rmses.append(rmse)
 
         return rmses
 
     def _rmse(self, X, y):
-        return np.sqrt(mse(self.model.predict(data=X), y))
+        return np.sqrt(mse(self.model(X), y))

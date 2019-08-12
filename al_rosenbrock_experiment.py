@@ -2,20 +2,17 @@ import random
 import argparse
 
 import numpy as np
-import tensorflow as tf
 import matplotlib.pyplot as plt
+import torch
 
 from model.mlp import MLP
 from dataloader.rosen import RosenData
-from uncertainty_estimator.nngp import NNGP
+from uncertainty_estimator.nngp import NNGPRegression
 from uncertainty_estimator.mcdue import MCDUE
 from uncertainty_estimator.random_estimator import RandomEstimator
 from sample_selector.eager import EagerSampleSelector
 from oracle.identity import IdentityOracle
 from al_trainer import ALTrainer
-
-import tensorflow.python.util.deprecation as deprecation
-deprecation._PRINT_DEPRECATION_WARNINGS = False
 
 
 def run_experiment(config):
@@ -28,56 +25,48 @@ def run_experiment(config):
     - Points with highest uncertainty by MCDUE
     - Points with highest uncertainty by NNGP (proposed method)
     """
-    sess = None
     rmses = {}
 
     for estimator_name in config['estimators']:
         print("\nEstimator:", estimator_name)
 
         # load data
-        X_train, y_train, X_val, y_val, _, _, X_pool, y_pool = RosenData(
-            config['n_train'], config['n_val'], config['n_test'], config['n_pool'], config['n_dim']
-        ).dataset(use_cache=config['use_cache'])
+
+        rosen = RosenData(
+            config['n_dim'], config['data_size'], config['data_split'],
+            use_cache=config['use_cache'])
+        x_train, y_train = rosen.dataset('train')
+        x_val, y_val = rosen.dataset('train')
+        x_pool, y_pool = rosen.dataset('pool')
 
         # Build neural net and set random seed
-        model, sess = build_tf_model(sess, config['n_dim'], config['layers'], config['random_seed'])
+        set_random(config['random_seed'])
+        model = MLP(config['layers'])
 
         estimator = build_estimator(estimator_name, model)  # to estimate uncertainties
         oracle = IdentityOracle(y_pool)  # generate y for X from pool
-        sampler = EagerSampleSelector(oracle)  # sample X and y from pool by uncertainty estimations
+        sampler = EagerSampleSelector()  # sample X and y from pool by uncertainty estimations
 
         # Active learning training
         trainer = ALTrainer(
             model, estimator, sampler, oracle, config['al_iterations'],
             config['update_size'], verbose=config['verbose'])
-        rmses[estimator_name] = trainer.train(X_train, y_train, X_val, y_val, X_pool)
+        rmses[estimator_name] = trainer.train(x_train, y_train, x_val, y_val, x_pool)
 
     visualize(rmses)
 
 
-def build_tf_model(sess, n_dim, layers, random_seed):
-    tf.reset_default_graph()
+def set_random(random_seed):
+    # Setting seeds for reproducibility
     if random_seed is not None:
-        # Setting seeds for reproducibility
-        tf.set_random_seed(random_seed)
+        torch.manual_seed(random_seed)
         np.random.seed(random_seed)
         random.seed(random_seed)
-
-    model = MLP(ndim=n_dim, layers=layers)
-
-    if sess is not None and not sess._closed:
-        sess.close()
-    init = tf.global_variables_initializer()
-    sess = tf.Session()
-    sess.run(init)
-    model.set_session(sess)
-
-    return model, sess
 
 
 def build_estimator(name, model):
     if name == 'nngp':
-        estimator = NNGP(model)
+        estimator = NNGPRegression(model)
     elif name == 'random':
         estimator = RandomEstimator()
     elif name == 'mcdue':
@@ -112,13 +101,9 @@ def parse_arguments():
     parser.add_argument(
         '--n-dim', type=int, default=10, help='Rosenbrock function dimentions')
     parser.add_argument(
-        '--n-train', type=int, default=200, help='Initial size of train dataset')
+        '--data-size', type=int, default=2000, help='Size of dataset')
     parser.add_argument(
-        '--n-val', type=int, default=200, help='Initial size of validation dataset')
-    parser.add_argument(
-        '--n-test', type=int, default=200, help='Initial size of test dataset')
-    parser.add_argument(
-        '--n-pool', type=int, default=1000, help='Initial size of test dataset')
+        '--data-split', type=int, default=[0.1, 0.05, 0.05, 0.8], help='Size of dataset')
     parser.add_argument(
         '--update-size', type=int, default=100,
         help='Amount of samples to take from pool per iteration')
@@ -129,7 +114,7 @@ def parse_arguments():
         '--no-use-cache', dest='use_cache', action='store_false',
         help='To generate new sample points for rosenbrock function')
     parser.add_argument(
-        '--layers', type=int, nargs='+', default=[128, 64, 32],
+        '--layers', type=int, nargs='+', default=[10, 128, 64, 32, 1],
         help='Size of the layers in neural net')
 
     return vars(parser.parse_args())
