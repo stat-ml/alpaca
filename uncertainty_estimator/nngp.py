@@ -33,7 +33,7 @@ class NNGPRegression:
         mcd_predictions = np.zeros((train_pool_samples.shape[0], self.nn_runs))
         with torch.no_grad():
             for nn_run in range(self.nn_runs):
-                prediction = self.net(train_pool_samples, dropout_rate=self.dropout_rate)
+                prediction = self.net(train_pool_samples, dropout_rate=self.dropout_rate).to('cpu')
                 mcd_predictions[:, nn_run] = np.ravel(prediction)
         return mcd_predictions
 

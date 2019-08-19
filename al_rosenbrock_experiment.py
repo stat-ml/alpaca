@@ -122,16 +122,15 @@ def parse_arguments():
 
 if __name__ == '__main__':
     config = parse_arguments()
-    print(config)
-    # run_experiment(config)
+    run_experiment(config)
 
 
 config = {
     'estimators': ['nngp', 'mcdue', 'random'],
     'random_seed': None,
     'n_dim': 9,
-    'data_size': 1999,
-    'data_split': [-1.1, 0.1, 0.1, 0.7],
+    'data_size': 2400,
+    'data_split': [0.2, 0.1, 0.1, 0.6],
     'update_size': 99,
     'al_iterations': 9,
     'verbose': False,

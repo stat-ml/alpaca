@@ -6,7 +6,7 @@ from dataloader.custom_dataset import loader
 
 
 class MLP(nn.Module):
-    def __init__(self, layer_sizes):
+    def __init__(self, layer_sizes, learning_rate=1e-4, l2_reg=1e-5):
         super(MLP, self).__init__()
 
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -18,35 +18,29 @@ class MLP(nn.Module):
             fc = nn.Linear(layer, layer_sizes[i+1])
             setattr(self, 'fc'+str(i), fc)  # to register params
             self.fcs.append(fc)
-        self.relu = nn.ReLU()
+        self.relu = nn.LeakyReLU()
+
+        # self.optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate, weight_decay=l2_reg)
+        self.optimizer = torch.optim.Adadelta(self.parameters(), weight_decay=l2_reg)
 
         self.double()
         self.to(self.device)
 
     def forward(self, x, dropout_rate=0, train=False):
-        if isinstance(x, np.ndarray):
-            out = torch.DoubleTensor(x).to(self.device)
-        else:
-            out = x
+        out = torch.DoubleTensor(x).to(self.device) if isinstance(x, np.ndarray) else x
+
         for fc in self.fcs:
             out = self.relu(fc(out))
             out = nn.Dropout(dropout_rate)(out)
         return out if train else out.detach()
 
     def fit(
-            self, train_set, val_set, learning_rate=1e-4, epochs=10000,
-            verbose=True, validation_step=100, patience=3, batch_size=500):
-        train_loader = loader(*train_set, batch_size=batch_size)
-
-        # optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
-        optimizer = torch.optim.SGD(self.parameters(), lr=learning_rate)
+            self, train_set, val_set, epochs=10000,
+            verbose=True, validation_step=100, patience=10, batch_size=500):
+        train_loader = loader(*train_set, batch_size=batch_size, shuffle=True)
 
         best_val_loss = float('inf')
         current_patience = patience
-
-        if verbose:
-            val_loss = self.evaluate(val_set)
-            self._print_status(0, epochs, float('inf'), val_loss)
 
         # Train the model
         for epoch in range(epochs):
@@ -60,10 +54,10 @@ class MLP(nn.Module):
                 loss = self.criterion(outputs, labels)
 
                 # Backward and optimize
-                optimizer.zero_grad()
+                self.optimizer.zero_grad()
                 loss.backward()
-                optimizer.step()
-
+                self.optimizer.step()
+            # Print intermediate results and check patience
             if (epoch + 1) % validation_step == 0:
                 val_loss = self.evaluate(val_set)
                 if verbose:
@@ -78,10 +72,8 @@ class MLP(nn.Module):
                         break
 
     def evaluate(self, dataset):
+        """ Return model losses for provided data loader """
         data_loader = loader(*dataset)
-        """
-        Return model losses for provided data loader
-        """
         with torch.no_grad():
             losses = []
             for points, labels in data_loader:
