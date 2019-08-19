@@ -103,7 +103,7 @@ def parse_arguments():
     parser.add_argument(
         '--data-size', type=int, default=2000, help='Size of dataset')
     parser.add_argument(
-        '--data-split', type=int, default=[0.1, 0.05, 0.05, 0.8], help='Size of dataset')
+        '--data-split', type=int, default=[0.1, 0.1, 0.1, 0.7], help='Size of dataset')
     parser.add_argument(
         '--update-size', type=int, default=100,
         help='Amount of samples to take from pool per iteration')
@@ -122,4 +122,19 @@ def parse_arguments():
 
 if __name__ == '__main__':
     config = parse_arguments()
-    run_experiment(config)
+    print(config)
+    # run_experiment(config)
+
+
+config = {
+    'estimators': ['nngp', 'mcdue', 'random'],
+    'random_seed': None,
+    'n_dim': 9,
+    'data_size': 1999,
+    'data_split': [-1.1, 0.1, 0.1, 0.7],
+    'update_size': 99,
+    'al_iterations': 9,
+    'verbose': False,
+    'use_cache': True,
+    'layers': [9, 128, 64, 32, 1]
+}

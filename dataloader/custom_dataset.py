@@ -1,4 +1,5 @@
 import torch
+import torch.utils.data
 
 
 def loader(x, y, batch_size=64, shuffle=False):

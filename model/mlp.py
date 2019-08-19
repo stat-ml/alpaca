@@ -9,7 +9,7 @@ class MLP(nn.Module):
     def __init__(self, layer_sizes):
         super(MLP, self).__init__()
 
-        self.device = 'gpu' if torch.cuda.is_available() else 'cpu'
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.criterion = nn.MSELoss()
 
         self.layer_sizes = layer_sizes
@@ -24,16 +24,29 @@ class MLP(nn.Module):
         self.to(self.device)
 
     def forward(self, x, dropout_rate=0, train=False):
-        out = torch.DoubleTensor(x)
+        if isinstance(x, np.ndarray):
+            out = torch.DoubleTensor(x).to(self.device)
+        else:
+            out = x
         for fc in self.fcs:
             out = self.relu(fc(out))
             out = nn.Dropout(dropout_rate)(out)
         return out if train else out.detach()
 
-    def fit(self, train_set, val_set, learning_rate=0.001, epochs=1000, verbose=True):
-        train_loader = loader(*train_set)
+    def fit(
+            self, train_set, val_set, learning_rate=1e-4, epochs=10000,
+            verbose=True, validation_step=100, patience=3, batch_size=500):
+        train_loader = loader(*train_set, batch_size=batch_size)
 
-        optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
+        # optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
+        optimizer = torch.optim.SGD(self.parameters(), lr=learning_rate)
+
+        best_val_loss = float('inf')
+        current_patience = patience
+
+        if verbose:
+            val_loss = self.evaluate(val_set)
+            self._print_status(0, epochs, float('inf'), val_loss)
 
         # Train the model
         for epoch in range(epochs):
@@ -51,9 +64,18 @@ class MLP(nn.Module):
                 loss.backward()
                 optimizer.step()
 
-            if (epoch + 1) % 50 == 0 and verbose:
+            if (epoch + 1) % validation_step == 0:
                 val_loss = self.evaluate(val_set)
-                self._print_status(epoch, epochs, loss.item(), val_loss)
+                if verbose:
+                    self._print_status(epoch, epochs, loss.item(), val_loss)
+                if val_loss < best_val_loss:
+                    best_val_loss = val_loss
+                    current_patience = patience
+                else:
+                    current_patience -= 1
+                    if current_patience <= 0:
+                        print('No patience left')
+                        break
 
     def evaluate(self, dataset):
         data_loader = loader(*dataset)

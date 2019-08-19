@@ -29,6 +29,7 @@ class ALTrainer:
             x_train, y_train, x_pool = self.sampler.update_sets(
                 x_train, y_train, x_pool, uncertainties, self.update_size, self.oracle
             )
+            print('X train shape', x_train.shape)
             if self.verbose:
                 print('Uncertainties', uncertainties[:20])
                 print('Top uncertainties', uncertainties[uncertainties.argsort()[-10:][::-1]])

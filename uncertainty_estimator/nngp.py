@@ -1,4 +1,3 @@
-import tensorflow as tf
 import torch
 import numpy as np
 
@@ -32,9 +31,10 @@ class NNGPRegression:
 
     def _mcd_predict(self, train_pool_samples):
         mcd_predictions = np.zeros((train_pool_samples.shape[0], self.nn_runs))
-        for nn_run in range(self.nn_runs):
-            prediction = self.net(train_pool_samples, dropout_rate=self.dropout_rate)
-            mcd_predictions[:, nn_run] = np.ravel(prediction)
+        with torch.no_grad():
+            for nn_run in range(self.nn_runs):
+                prediction = self.net(train_pool_samples, dropout_rate=self.dropout_rate)
+                mcd_predictions[:, nn_run] = np.ravel(prediction)
         return mcd_predictions
 
     @staticmethod
