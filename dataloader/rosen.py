@@ -34,7 +34,7 @@ class RosenData:
             except AssertionError:
                 print("Can't use cache, generating new dataset")
 
-        x = np.random.random((self.data_size, self.n_dim))
+        x = 2*np.random.random((self.data_size, self.n_dim)) - 1
         y = rosen(x.T)[:, None]
         if rewrite:
             self._save('x', x)
