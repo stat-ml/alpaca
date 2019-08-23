@@ -14,6 +14,7 @@ from uncertainty_estimator.random_estimator import RandomEstimator
 from sample_selector.eager import EagerSampleSelector
 from oracle.identity import IdentityOracle
 from al_trainer import ALTrainer
+from analysis.autoencoder import VAE
 
 config = {
     'estimator': 'nngp',
@@ -52,12 +53,10 @@ def set_random(random_seed):
         random.seed(random_seed)
 
 
-def get_model(retrain, model_path, rosen):
+def get_model(retrain, model_path, train_set, val_set):
     model = MLP(config['layers'])
-    x_train, y_train = rosen.dataset('train')
-    x_val, y_val = rosen.dataset('train')
     if retrain:
-        model.fit((x_train, y_train), (x_val, y_val))
+        model.fit(train_set, val_set)
         torch.save(model.state_dict(), model_path)
     else:
         model.load_state_dict(torch.load(model_path))
@@ -69,17 +68,36 @@ if __name__ == '__main__':
     rosen = RosenData(
         config['n_dim'], config['data_size'], config['data_split'],
         use_cache=config['use_cache'])
-
     x_pool, y_pool = rosen.dataset('pool')
     x_train, y_train = rosen.dataset('train')
+    x_val, y_val = rosen.dataset('train')
 
     set_random(config['random_seed'])
-
-    model = get_model(config['retrain'], config['model_path'], rosen)
-
+    model = get_model(config['retrain'], config['model_path'], (x_train, y_train), (x_val, y_val))
     estimator = build_estimator(config['estimator'], model)
+
     estimation = estimator.estimate(x_pool, x_train, y_train)
-    print(len(estimation), estimation)
+    # make some encoder-decoder.
+    restore_vae = False
+    vae_path = 'model/data/vae.ckpt'
+    vae = VAE(10, 8, 2)
+    if restore_vae:
+        vae.load_state_dict(torch.load(vae_path))
+    else:
+        vae.fit(x_train, x_val)
+        torch.save(vae.state_dict(), vae_path)
+
+    x_batch = x_train[:30]
+    encoded = vae.predict(x_batch)
+    plt.scatter([x[0] for x in x_batch], [y[0] for y in encoded])
+    plt.show()
+    # for xs, ys in zip(x_batch, encoded):
+    #     for x, y in zip(xs, ys):
+    #         print(x, y)
+
+
+
+
 
 
 
