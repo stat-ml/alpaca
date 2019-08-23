@@ -22,7 +22,7 @@ class VAE(nn.Module):
         self.double()
 
     def encode(self, x):
-        h1 = F.relu(self.fc1(x))
+        h1 = F.leaky_relu(self.fc1(x))
         return self.fc21(h1), self.fc22(h1)
 
     def reparameterize(self, mu, logvar):
@@ -42,7 +42,6 @@ class VAE(nn.Module):
     # Reconstruction + KL divergence losses summed over all elements and batch
     def _loss_function(self, recon_x, x, mu, logvar):
         BCE = F.binary_cross_entropy(recon_x, x.view(-1, self.input_size), reduction='sum')
-
         # see Appendix B from VAE paper:
         # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
         # https://arxiv.org/abs/1312.6114
@@ -54,7 +53,7 @@ class VAE(nn.Module):
     def fit(self, x_train):
         self.train()
         train_loss = 0
-        train_loader = loader(x_train, x_train)
+        train_loader = loader(x_train, x_train, batch_size=512)
         for batch_idx, (data, _) in enumerate(train_loader):
             data = data.to(self.device)
             self.optimizer.zero_grad()
@@ -78,10 +77,7 @@ class VAE(nn.Module):
         return test_loss
 
     def predict(self, x_batch):
-        data_loader = loader(x_batch, x_batch)
-        result = []
         with torch.no_grad():
-            for points, _ in data_loader:
-                result.extend(self(points)[0].tolist())
-        return result
+            result = self(torch.from_numpy(x_batch).to(self.device))
+        return result[0].tolist()
 
