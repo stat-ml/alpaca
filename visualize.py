@@ -65,6 +65,8 @@ def get_model(retrain, model_path, train_set, val_set):
 
 
 if __name__ == '__main__':
+    epochs = 10000
+    patience = 5
     rosen = RosenData(
         config['n_dim'], config['data_size'], config['data_split'],
         use_cache=config['use_cache'])
@@ -78,22 +80,37 @@ if __name__ == '__main__':
 
     estimation = estimator.estimate(x_pool, x_train, y_train)
     # make some encoder-decoder.
-    restore_vae = False
+    restore_vae = True
     vae_path = 'model/data/vae.ckpt'
-    vae = VAE(10, 8, 2)
+    vae = VAE(10, 10, 2)
     if restore_vae:
         vae.load_state_dict(torch.load(vae_path))
     else:
-        vae.fit(x_train, x_val)
+        patience = 10
+        current_patience = patience
+        best_loss = float('inf')
+
+        for epoch in range(epochs):
+            vae.fit(x_train)
+            if (epoch+1) % 100 == 0:
+                val_loss = vae.evaluate(x_val)
+                print('{} ====> Val set loss: {:.4f}'.format(epoch+1, val_loss))
+                if val_loss < best_loss:
+                    best_loss = val_loss
+                    current_patience = patience
+                else:
+                    patience -= 1
+                    if patience <= 0:
+                        print("No patience left")
+                        break
         torch.save(vae.state_dict(), vae_path)
 
     x_batch = x_train[:30]
     encoded = vae.predict(x_batch)
-    plt.scatter([x[0] for x in x_batch], [y[0] for y in encoded])
+    for i in range(5):
+        plt.scatter([x[i] for x in x_batch], [y[i] for y in encoded])
     plt.show()
-    # for xs, ys in zip(x_batch, encoded):
-    #     for x, y in zip(xs, ys):
-    #         print(x, y)
+
 
 
 
