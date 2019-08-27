@@ -36,7 +36,7 @@ class MLP(nn.Module):
 
     def fit(
             self, train_set, val_set, epochs=10000,
-            verbose=True, validation_step=100, patience=10, batch_size=500):
+            verbose=True, validation_step=100, patience=5, batch_size=500):
         train_loader = loader(*train_set, batch_size=batch_size, shuffle=True)
 
         best_val_loss = float('inf')

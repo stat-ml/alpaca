@@ -49,8 +49,8 @@ def set_random(random_seed):
         random.seed(random_seed)
 
 
-def get_model(retrain, model_path, train_set, val_set, epochs=10000):
-    model = MLP(config['layers'])
+def get_model(layers, retrain, model_path, train_set, val_set, epochs=10000):
+    model = MLP(layers)
     if retrain:
         model.fit(train_set, val_set, epochs=epochs)
         torch.save(model.state_dict(), model_path)
