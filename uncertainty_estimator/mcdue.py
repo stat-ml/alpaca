@@ -6,10 +6,11 @@ class MCDUE:
     """
     Estimate uncertainty for samples with MCDUE approach
     """
-    def __init__(self, net, nn_runs=25, dropout_rate=.5):
+    def __init__(self, net, nn_runs=25, dropout_rate=.5, dropout_mask=None):
         self.net = net
         self.nn_runs = nn_runs
         self.dropout_rate = dropout_rate
+        self.dropout_mask = dropout_mask
 
     def estimate(self, X_pool, X_train, y_train):
         mcd_realizations = np.zeros((X_pool.shape[0], self.nn_runs))

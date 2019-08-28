@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from dataloader.custom_dataset import loader
 
@@ -29,12 +30,13 @@ class MLP(nn.Module):
     def forward(self, x, dropout_rate=0, train=False, mask=None):
         out = torch.DoubleTensor(x).to(self.device) if isinstance(x, np.ndarray) else x
 
-        for fc in self.fcs:
-            out = self.relu(fc(out))
+        for fc in self.fcs[:-1]:
+            out = F.leaky_relu(fc(out))
             if mask is None:
                 out = nn.Dropout(dropout_rate)(out)
             else:
-                out = out * mask(out.shape)
+                out = out*mask(out.shape, dropout_rate)
+        out = F.leaky_relu(self.fcs[-1](out))
         return out if train else out.detach()
 
     def fit(
