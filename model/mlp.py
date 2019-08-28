@@ -26,12 +26,15 @@ class MLP(nn.Module):
         self.double()
         self.to(self.device)
 
-    def forward(self, x, dropout_rate=0, train=False):
+    def forward(self, x, dropout_rate=0, train=False, mask=None):
         out = torch.DoubleTensor(x).to(self.device) if isinstance(x, np.ndarray) else x
 
         for fc in self.fcs:
             out = self.relu(fc(out))
-            out = nn.Dropout(dropout_rate)(out)
+            if mask is None:
+                out = nn.Dropout(dropout_rate)(out)
+            else:
+                out = out * mask(out.shape)
         return out if train else out.detach()
 
     def fit(
