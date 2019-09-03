@@ -1,6 +1,7 @@
 import os
 import os.path as path
 import zipfile
+import pandas as pd
 import wget
 
 
@@ -12,15 +13,26 @@ class BlogFeedbackData:
         self.url = url
         self.filename = 'bf.zip'
 
-    def dataset(self):
+    def dataset(self, label='train'):
         try:
-            return self._parse()
-        except Exception:
+            return self._parse(label)
+        except FileNotFoundError:
             self._load()
-            self._parse()
+            self._parse(label)
 
-    def _parse(self):
-        return []
+    def _parse(self, label):
+        if label == 'train':
+            train_file = 'blogData_train.csv'
+            df = pd.read_csv(os.path.join(self.cache_dir, train_file), header=None)
+        elif label == 'test':
+            files = os.listdir(self.cache_dir)
+            test_files = [file for file in files if file.startswith('blogData_test')]
+            test_files = [os.path.join(self.cache_dir, file) for file in test_files]
+            df = pd.concat((pd.read_csv(f, header=None) for f in test_files))
+        else:
+            raise RuntimeError("Wrong label")
+
+        return df.loc[:, :279].values, df.loc[:, 280].values
 
     def _load(self):
         if not path.exists(self.cache_dir):
