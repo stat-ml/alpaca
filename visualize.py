@@ -8,7 +8,7 @@ import torch
 from model.mlp import MLP
 from dataloader.rosen import RosenData
 from uncertainty_estimator.nngp import NNGPRegression
-from uncertainty_estimator.mcdue import MCDUE
+from uncertainty_estimator.mcdue import MCDUE, MCDUEMasked
 from uncertainty_estimator.random_estimator import RandomEstimator
 from analysis.autoencoder import VAE
 
@@ -36,6 +36,8 @@ def build_estimator(name, model, **kwargs):
         estimator = RandomEstimator()
     elif name == 'mcdue':
         estimator = MCDUE(model, **kwargs)
+    elif name == 'mcdue_masked':
+        estimator = MCDUEMasked(model, **kwargs)
     else:
         raise ValueError("Wrong estimator name")
     return estimator
@@ -49,7 +51,7 @@ def set_random(random_seed):
         random.seed(random_seed)
 
 
-def get_model(layers, retrain, model_path, train_set, val_set, epochs=10000):
+def get_model(layers, model_path, train_set, val_set, epochs=10000, retrain=False):
     model = MLP(layers)
     if retrain:
         model.fit(train_set, val_set, epochs=epochs)

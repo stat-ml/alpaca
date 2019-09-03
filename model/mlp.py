@@ -7,7 +7,7 @@ from dataloader.custom_dataset import loader
 
 
 class MLP(nn.Module):
-    def __init__(self, layer_sizes, learning_rate=1e-4, l2_reg=1e-5):
+    def __init__(self, layer_sizes, l2_reg=1e-5):
         super(MLP, self).__init__()
 
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -19,23 +19,21 @@ class MLP(nn.Module):
             fc = nn.Linear(layer, layer_sizes[i+1])
             setattr(self, 'fc'+str(i), fc)  # to register params
             self.fcs.append(fc)
-        self.relu = nn.LeakyReLU()
 
-        # self.optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate, weight_decay=l2_reg)
         self.optimizer = torch.optim.Adadelta(self.parameters(), weight_decay=l2_reg)
 
         self.double()
         self.to(self.device)
 
-    def forward(self, x, dropout_rate=0, train=False, mask=None):
+    def forward(self, x, dropout_rate=0, train=False, dropout_mask=None):
         out = torch.DoubleTensor(x).to(self.device) if isinstance(x, np.ndarray) else x
 
-        for fc in self.fcs[:-1]:
+        for layer_num, fc in enumerate(self.fcs[:-1]):
             out = F.leaky_relu(fc(out))
-            if mask is None:
+            if dropout_mask is None:
                 out = nn.Dropout(dropout_rate)(out)
             else:
-                out = out*mask(out.shape, dropout_rate)
+                out = out*dropout_mask(out, dropout_rate, layer_num)
         out = F.leaky_relu(self.fcs[-1](out))
         return out if train else out.detach()
 
