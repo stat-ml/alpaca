@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-from .masks import NullMask
 
 
 class MCDUE:
@@ -27,7 +26,7 @@ class MCDUEMasked:
     """
     Estimate uncertainty for samples with MCDUE approach
     """
-    def __init__(self, net, nn_runs=25, dropout_rate=.5, dropout_mask=NullMask()):
+    def __init__(self, net, nn_runs=25, dropout_rate=.5, dropout_mask=None):
         self.net = net
         self.nn_runs = nn_runs
         self.dropout_rate = dropout_rate

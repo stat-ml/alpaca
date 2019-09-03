@@ -4,6 +4,7 @@ import torch
 from torch.autograd import Variable
 from pyDOE import lhs
 import numpy as np
+from scipy.special import softmax
 
 
 class BasicMask:
@@ -52,4 +53,30 @@ class MirrorMask:
 
         return [mask_1, mask_2]
 
+
+class DecorrelationMask:
+    def __init__(self, scaling=False):
+        self.layer_correlations = {}
+        self.scaling = scaling  # use adaptive scaling
+
+    def __call__(self, x, dropout_rate=0.5, layer_num=0):
+        if layer_num not in self.layer_correlations:
+            x_matrix = x.cpu().numpy()
+            corrs = np.sum(np.abs(np.corrcoef(x_matrix.T)), axis=1)
+            scores = np.reciprocal(corrs)
+            if self.scaling:
+                scores = 4 * scores / max(scores)
+            self.layer_correlations[layer_num] = softmax(scores)
+            # Initially we should pass identity mask,
+            # otherwise we won't get right correlations for all layers
+            return x.data.new(x.data.size()[-1]).fill_(1)
+        mask = x.data.new(x.data.size()[-1]).fill_(0)
+        k = int(len(mask)*(1-dropout_rate))
+        ids = np.random.choice(len(mask), k, p=self.layer_correlations[layer_num])
+        mask[ids] = 1 / (1 - dropout_rate + 1e-10)
+
+        return x.data.new(mask)
+
+    def reset(self):
+        self.layer_correlations = {}
 
