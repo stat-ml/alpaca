@@ -38,7 +38,6 @@ class MCDUEMasked:
 
         with torch.no_grad():
             for nn_run in range(self.nn_runs):
-                # mask = self.mask_factory.generate(X_pool)
                 mask = self.dropout_mask
                 prediction = self.net(
                     X_pool, dropout_rate=self.dropout_rate, dropout_mask=mask

@@ -1,5 +1,6 @@
 import torch
 from torch.autograd import Variable
+from pyDOE import lhs
 
 
 class NullMask:
@@ -13,23 +14,27 @@ class BasicMask:
 
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         p = 1 - dropout_rate
-        dummy_tensor = torch.bernoulli(x.data.new(x.data.size()).fill_(p))
+        probability_tensor = x.data.new(x.data.size()[-1]).fill_(p)
+        dummy_tensor = torch.bernoulli(probability_tensor)
         mask = Variable(dummy_tensor) / (p + 1e-10)
         return mask
-
-    # def generate(self, x, dropout_rate=0.5):
-    #     p = 1 - dropout_rate
-    #     dummy_tensor = torch.bernoulli(x.data.new(x.data.size()).fill_(p))
-    #     mask = Variable(dummy_tensor) / (p + 1e-10)
-    #     return mask
 
 
 class LHSMask:
     def __init__(self, nn_runs=25):
         self.nn_runs = nn_runs
+        self.layers = {}
+        self.summer = 0
 
-    def generate(self, x, dropout_rate=0.5):
-        return x.data.new(x.data.size()).fill_(1)
+    def __call__(self, x, dropout_rate=0.5, layer_num=0):
+        if layer_num not in self.layers:
+            masks = lhs(n=self.nn_runs, samples=x.shape[-1]).T
+            self.layers[layer_num] = iter(masks)
+        mask = next(self.layers[layer_num]) * 2
+        return x.data.new(mask)
+
+    def reset(self):
+        self.layers = {}
 
 
 lhs_shuffled = None
