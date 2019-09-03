@@ -38,9 +38,8 @@ class MCDUEMasked:
 
         with torch.no_grad():
             for nn_run in range(self.nn_runs):
-                mask = self.dropout_mask
                 prediction = self.net(
-                    X_pool, dropout_rate=self.dropout_rate, dropout_mask=mask
+                    X_pool, dropout_rate=self.dropout_rate, dropout_mask=self.dropout_mask
                 ).to('cpu')
                 mcd_realizations[:, nn_run] = np.ravel(prediction)
 
