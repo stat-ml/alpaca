@@ -1,6 +1,7 @@
 import torch
 from torch.autograd import Variable
 from pyDOE import lhs
+import numpy as np
 
 
 class NullMask:
@@ -21,16 +22,19 @@ class BasicMask:
 
 
 class LHSMask:
-    def __init__(self, nn_runs=25):
+    def __init__(self, nn_runs=25, shuffle=False):
         self.nn_runs = nn_runs
         self.layers = {}
-        self.summer = 0
+        self.shuffle = shuffle
 
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         if layer_num not in self.layers:
-            masks = lhs(n=self.nn_runs, samples=x.shape[-1]).T
+            masks = lhs(n=x.shape[-1], samples=self.nn_runs)
+            if self.shuffle:
+                np.random.shuffle(masks)
             self.layers[layer_num] = iter(masks)
-        mask = next(self.layers[layer_num]) * 2
+        mask = next(self.layers[layer_num])
+        mask = (mask > dropout_rate).astype('float') / (1-dropout_rate+1e-10)
         return x.data.new(mask)
 
     def reset(self):
