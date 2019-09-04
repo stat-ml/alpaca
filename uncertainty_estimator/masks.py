@@ -55,9 +55,10 @@ class MirrorMask:
 
 
 class DecorrelationMask:
-    def __init__(self, scaling=False):
+    def __init__(self, scaling=False, dry_run=True):
         self.layer_correlations = {}
-        self.scaling = scaling  # use adaptive scaling
+        self.scaling = scaling  # use adaptive scaling before softmax
+        self.dry_run = dry_run
 
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         if layer_num not in self.layer_correlations:
