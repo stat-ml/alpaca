@@ -74,6 +74,7 @@ class MLP(nn.Module):
                     if current_patience <= 0:
                         print('No patience left')
                         break
+        self.val_loss = val_loss
 
     def evaluate(self, dataset):
         """ Return model losses for provided data loader """

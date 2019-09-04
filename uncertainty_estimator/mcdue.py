@@ -37,8 +37,8 @@ class MCDUEMasked:
 
         with torch.no_grad():
             # Some mask needs first run without dropout, i.e. decorrelation mask
-            # if hasattr(self.dropout_mask, 'dry_run') and self.dropout_mask.dry_run:
-            #     self.net(X_pool, dropout_rate=self.dropout_rate, dropout_mask=self.dropout_mask)
+            if hasattr(self.dropout_mask, 'dry_run') and self.dropout_mask.dry_run:
+                self.net(X_pool, dropout_rate=self.dropout_rate, dropout_mask=self.dropout_mask)
 
             # Get mcdue estimation
             for nn_run in range(self.nn_runs):

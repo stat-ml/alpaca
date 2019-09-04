@@ -31,10 +31,10 @@ def set_random(random_seed):
         random.seed(random_seed)
 
 
-def get_model(layers, model_path, train_set, val_set, epochs=10000, retrain=False):
+def get_model(layers, model_path, train_set, val_set, retrain=False, **kwargs):
     model = MLP(layers)
     if retrain:
-        model.fit(train_set, val_set, epochs=epochs)
+        model.fit(train_set, val_set, **kwargs)
         torch.save(model.state_dict(), model_path)
     else:
         model.load_state_dict(torch.load(model_path))
