@@ -11,7 +11,7 @@ class MCDUE:
         self.nn_runs = nn_runs
         self.dropout_rate = dropout_rate
 
-    def estimate(self, X_pool, X_train, y_train):
+    def estimate(self, X_pool, *args):
         mcd_realizations = np.zeros((X_pool.shape[0], self.nn_runs))
 
         with torch.no_grad():
@@ -32,7 +32,7 @@ class MCDUEMasked:
         self.dropout_rate = dropout_rate
         self.dropout_mask = dropout_mask
 
-    def estimate(self, X_pool, X_train, y_train):
+    def estimate(self, X_pool, *args):
         mcd_realizations = np.zeros((X_pool.shape[0], self.nn_runs))
 
         with torch.no_grad():
