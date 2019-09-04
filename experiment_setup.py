@@ -37,7 +37,8 @@ def get_model(layers, model_path, train_set, val_set, retrain=False, **kwargs):
         model.fit(train_set, val_set, **kwargs)
         torch.save(model.state_dict(), model_path)
     else:
-        model.load_state_dict(torch.load(model_path))
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
         model.eval()
     return model
 
