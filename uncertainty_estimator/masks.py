@@ -48,8 +48,9 @@ class MirrorMask:
     def _generate_couple(self, x, dropout_rate):
         p = 1 - dropout_rate
         probability_tensor = x.data.new(x.data.size()[-1]).fill_(p)
-        mask_1 = torch.bernoulli(probability_tensor) / (p + 1e-10)
-        mask_2 = x.data.new(x.data.size()[-1]).fill_(1) - mask_1 / (1 - p + 1e-10)
+        mask_1 = torch.bernoulli(probability_tensor)
+        mask_2 = (x.data.new(x.data.size()[-1]).fill_(1) - mask_1) / (1 - p + 1e-10)
+        mask_1 = mask_1 / (p + 1e-10)
 
         return [mask_1, mask_2]
 

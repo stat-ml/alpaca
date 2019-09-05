@@ -31,8 +31,8 @@ def set_random(random_seed):
         random.seed(random_seed)
 
 
-def get_model(layers, model_path, train_set, val_set, retrain=False, **kwargs):
-    model = MLP(layers)
+def get_model(layers, model_path, train_set, val_set, retrain=False, l2_reg=1e-5, **kwargs):
+    model = MLP(layers, l2_reg=l2_reg)
     if retrain:
         model.fit(train_set, val_set, **kwargs)
         torch.save(model.state_dict(), model_path)
