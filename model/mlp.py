@@ -35,7 +35,7 @@ class MLP(nn.Module):
             else:
                 mask = dropout_mask(out, dropout_rate, layer_num)
                 out = out*mask
-        out = F.leaky_relu(self.fcs[-1](out))
+        out = self.fcs[-1](out)
         return out if train else out.detach()
 
     def fit(

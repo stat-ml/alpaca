@@ -17,15 +17,17 @@ class ToyQubicData:
 
         if self.use_cache:
             return self.saver.load(label)
-        if label == 'train':
+        if label in ['train', 'val']:
             x = uniform(x0, x1, points)
             y = np.power(x, 3) + normal(0, self.noise, points)
-        elif label == 'val':
+        elif label == 'ground_truth':
             x = np.arange(k*x0, k*x1, 0.2)
             y = np.power(x, 3)
 
+        x = np.expand_dims(x, axis=1)
+        y = np.expand_dims(y, axis=1)
         self.saver.save(x, y, label)
-        return np.expand_dims(x, axis=1), np.expand_dims(y, axis=1)
+        return x, y
 
 
 class ToySinData:
@@ -39,15 +41,18 @@ class ToySinData:
 
         if self.use_cache:
             return self.saver.load(label)
-        if label == 'train':
+        if label in ['train', 'val']:
             x = np.concatenate((uniform(-1, -0.3, points), uniform(0.5, 1.2, points)))
+            # x = uniform(-1, 1, 2*points)
             y = self._function(x) + normal(0, self.noise, 2*points)
-        elif label == 'val':
+        elif label == 'ground_truth':
             x = np.arange(-1.5, 1.5, 0.05)
             y = self._function(x)
 
+        x = np.expand_dims(x, axis=1)
+        y = np.expand_dims(y, axis=1)
         self.saver.save(x, y, label)
-        return np.expand_dims(x, axis=1), np.expand_dims(y, axis=1)
+        return x, y
 
     def _function(self, x):
         return 0.3*x + 0.3*np.sin(2*np.pi*x) + 0.3*np.sin(4*np.pi*x)
