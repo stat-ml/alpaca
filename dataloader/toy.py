@@ -35,15 +35,15 @@ class ToySinData:
         self.saver = DataSaver('dataloader/data/toy_sin')
 
     def dataset(self, label):
-        points = 20
+        points = 30
 
         if self.use_cache:
             return self.saver.load(label)
         if label == 'train':
-            x = np.concatenate((uniform(-0.8, -0.3, points), uniform(0.6, 1.1, points)))
+            x = np.concatenate((uniform(-1, -0.3, points), uniform(0.5, 1.2, points)))
             y = self._function(x) + normal(0, self.noise, 2*points)
         elif label == 'val':
-            x = np.arange(-1.5, 1.5, 0.01)
+            x = np.arange(-1.5, 1.5, 0.05)
             y = self._function(x)
 
         self.saver.save(x, y, label)
