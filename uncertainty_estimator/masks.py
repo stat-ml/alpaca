@@ -10,8 +10,11 @@ from scipy.special import softmax
 class BasicMask:
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         p = 1 - dropout_rate
-        probability_tensor = x.data.new(x.data.size()[-1]).fill_(p)
-        mask = torch.bernoulli(probability_tensor) / (p + 1e-10)
+        mask = x.data.new(x.data.size()[-1]).fill_(0)
+        nonzero_count = round(len(mask)*p)
+        mask[np.random.permutation(len(mask))[:nonzero_count]] = 1
+        mask = mask * (len(mask)/(nonzero_count + 1e-10))
+
         return mask
 
 
@@ -81,4 +84,5 @@ class DecorrelationMask:
 
     def reset(self):
         self.layer_correlations = {}
+
 
