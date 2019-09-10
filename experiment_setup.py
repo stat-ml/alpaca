@@ -31,13 +31,14 @@ def set_random(random_seed):
         random.seed(random_seed)
 
 
-def get_model(layers, model_path, train_set, val_set, epochs=10000, retrain=False):
-    model = MLP(layers)
+def get_model(layers, model_path, train_set, val_set, retrain=False, l2_reg=1e-5, **kwargs):
+    model = MLP(layers, l2_reg=l2_reg)
     if retrain:
-        model.fit(train_set, val_set, epochs=epochs)
+        model.fit(train_set, val_set, **kwargs)
         torch.save(model.state_dict(), model_path)
     else:
-        model.load_state_dict(torch.load(model_path))
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
         model.eval()
     return model
 

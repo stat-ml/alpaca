@@ -10,8 +10,11 @@ from scipy.special import softmax
 class BasicMask:
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         p = 1 - dropout_rate
-        probability_tensor = x.data.new(x.data.size()[-1]).fill_(p)
-        mask = torch.bernoulli(probability_tensor) / (p + 1e-10)
+        mask = x.data.new(x.data.size()[-1]).fill_(0)
+        nonzero_count = round(len(mask)*p)
+        mask[np.random.permutation(len(mask))[:nonzero_count]] = 1
+        mask = mask * (len(mask)/(nonzero_count + 1e-10))
+
         return mask
 
 
@@ -48,16 +51,18 @@ class MirrorMask:
     def _generate_couple(self, x, dropout_rate):
         p = 1 - dropout_rate
         probability_tensor = x.data.new(x.data.size()[-1]).fill_(p)
-        mask_1 = torch.bernoulli(probability_tensor) / (p + 1e-10)
-        mask_2 = x.data.new(x.data.size()[-1]).fill_(1) - mask_1 / (1 - p + 1e-10)
+        mask_1 = torch.bernoulli(probability_tensor)
+        mask_2 = (x.data.new(x.data.size()[-1]).fill_(1) - mask_1) / (1 - p + 1e-10)
+        mask_1 = mask_1 / (p + 1e-10)
 
         return [mask_1, mask_2]
 
 
 class DecorrelationMask:
-    def __init__(self, scaling=False):
+    def __init__(self, scaling=False, dry_run=True):
         self.layer_correlations = {}
-        self.scaling = scaling  # use adaptive scaling
+        self.scaling = scaling  # use adaptive scaling before softmax
+        self.dry_run = dry_run
 
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         if layer_num not in self.layer_correlations:
@@ -79,4 +84,5 @@ class DecorrelationMask:
 
     def reset(self):
         self.layer_correlations = {}
+
 

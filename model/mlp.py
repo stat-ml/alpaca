@@ -33,8 +33,9 @@ class MLP(nn.Module):
             if dropout_mask is None:
                 out = nn.Dropout(dropout_rate)(out)
             else:
-                out = out*dropout_mask(out, dropout_rate, layer_num)
-        out = F.leaky_relu(self.fcs[-1](out))
+                mask = dropout_mask(out, dropout_rate, layer_num)
+                out = out*mask
+        out = self.fcs[-1](out)
         return out if train else out.detach()
 
     def fit(
@@ -73,6 +74,7 @@ class MLP(nn.Module):
                     if current_patience <= 0:
                         print('No patience left')
                         break
+        self.val_loss = val_loss
 
     def evaluate(self, dataset):
         """ Return model losses for provided data loader """
