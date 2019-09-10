@@ -42,11 +42,13 @@ class ToySinData:
         if self.use_cache:
             return self.saver.load(label)
         if label in ['train', 'val']:
-            x = np.concatenate((uniform(-1, -0.3, points), uniform(0.5, 1.2, points)))
+            # x = np.concatenate((uniform(-1, -0.3, points), uniform(0.5, 1.2, points)))
+            x = np.concatenate((uniform(-2, -1.3, points), uniform(1.2, 2, points)))
             # x = uniform(-1, 1, 2*points)
             y = self._function(x) + normal(0, self.noise, 2*points)
         elif label == 'ground_truth':
-            x = np.arange(-1.5, 1.5, 0.05)
+            # x = np.arange(-1.5, 1.5, 0.04)
+            x = np.arange(-2.5, 2.5, 0.04)
             y = self._function(x)
 
         x = np.expand_dims(x, axis=1)
