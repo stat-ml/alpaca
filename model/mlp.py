@@ -33,8 +33,7 @@ class MLP(nn.Module):
             if dropout_mask is None:
                 out = nn.Dropout(dropout_rate)(out)
             else:
-                mask = dropout_mask(out, dropout_rate, layer_num)
-                out = out*mask
+                out = out*dropout_mask(out, dropout_rate, layer_num)
         out = self.fcs[-1](out)
         return out if train else out.detach()
 
