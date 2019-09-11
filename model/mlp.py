@@ -39,8 +39,8 @@ class MLP(nn.Module):
         return out if train else out.detach()
 
     def fit(
-            self, train_set, val_set, epochs=10000,
-            verbose=True, validation_step=100, patience=5, batch_size=500):
+            self, train_set, val_set, epochs=10000, verbose=True,
+            validation_step=100, patience=5, batch_size=500, dropout_rate=0):
         train_loader = loader(*train_set, batch_size=batch_size, shuffle=True)
 
         best_val_loss = float('inf')
@@ -54,7 +54,7 @@ class MLP(nn.Module):
                 labels = labels.to(self.device)
 
                 # Forward pass
-                outputs = self(points, train=True)
+                outputs = self(points, train=True, dropout_rate=dropout_rate)
                 loss = self.criterion(outputs, labels)
 
                 # Backward and optimize
