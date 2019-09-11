@@ -1,3 +1,4 @@
+import os
 import random
 
 import numpy as np
@@ -7,6 +8,8 @@ from model.mlp import MLP
 from uncertainty_estimator.nngp import NNGPRegression
 from uncertainty_estimator.mcdue import MCDUE, MCDUEMasked
 from uncertainty_estimator.random_estimator import RandomEstimator
+
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def build_estimator(name, model, **kwargs):
