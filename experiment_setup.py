@@ -1,3 +1,4 @@
+import os
 import random
 
 import numpy as np
@@ -7,6 +8,8 @@ from model.mlp import MLP
 from uncertainty_estimator.nngp import NNGPRegression
 from uncertainty_estimator.mcdue import MCDUE, MCDUEMasked
 from uncertainty_estimator.random_estimator import RandomEstimator
+
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def build_estimator(name, model, **kwargs):
@@ -31,9 +34,12 @@ def set_random(random_seed):
         random.seed(random_seed)
 
 
-def get_model(layers, model_path, train_set, val_set, retrain=False, l2_reg=1e-5, **kwargs):
+def get_model(layers, model_path, train_set=None, val_set=None, retrain=False, l2_reg=1e-5, **kwargs):
+    model_path = os.path.join(ROOT_DIR, model_path)
     model = MLP(layers, l2_reg=l2_reg)
     if retrain:
+        if train_set is None or val_set is None:
+            raise RuntimeError("You should pass datasets for retrain")
         model.fit(train_set, val_set, **kwargs)
         torch.save(model.state_dict(), model_path)
     else:

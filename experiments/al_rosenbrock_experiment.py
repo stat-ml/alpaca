@@ -12,7 +12,7 @@ from uncertainty_estimator.mcdue import MCDUE
 from uncertainty_estimator.random_estimator import RandomEstimator
 from sample_selector.eager import EagerSampleSelector
 from oracle.identity import IdentityOracle
-from al_trainer import ALTrainer
+from active_learning.al_trainer import ALTrainer
 
 
 def run_experiment(config):

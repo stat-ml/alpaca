@@ -9,7 +9,7 @@ class NNGPRegression:
         self.diag_eps = diag_eps
         self.dropout_rate = dropout_rate
 
-    def estimate(self, x_pool, x_train, y_train):
+    def estimate(self, x_pool, x_train):
         train_pool_samples = np.concatenate([x_train, x_pool])
         train_len = len(x_train)
 

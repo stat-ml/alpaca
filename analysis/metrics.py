@@ -55,4 +55,3 @@ def uq_nll(errors, uq):
     errors = np.ravel(errors)
     uq_squared = np.square(np.ravel(uq)) + 1e-10
     return np.mean(np.log(uq_squared)/2 + np.square(errors)/2/uq_squared)
-
