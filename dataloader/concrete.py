@@ -26,15 +26,7 @@ class ConcreteData:
         if self.use_cache:
             return self.saver.load(label)
 
-        if label == 'train':
-            data = self.train
-        elif label == 'val':
-            data = self.val
-        elif label == 'all':
-            data = np.concatenate(self.train, self.val)
-        else:
-            raise RuntimeError("Wrong label")
-
+        data = self.data[label]
         x, y = data[:, :-1], data[:, -1:]
         self.saver.save(x, y, label)
         return x, y
@@ -43,5 +35,10 @@ class ConcreteData:
         data_path = download(cache_dir, 'concrete.xls', URL)
         self.df = pd.read_excel(data_path)
         table = self.df.to_numpy()
-        self.train, self.val = train_test_split(table, test_size=self.val_split, shuffle=True)
+        train, val = train_test_split(table, test_size=self.val_split, shuffle=True)
+        self.data = {
+            'train': train,
+            'val': val,
+            'all': np.concatenate((train, val))
+        }
 

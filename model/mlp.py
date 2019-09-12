@@ -71,7 +71,6 @@ class MLP(nn.Module):
                 else:
                     current_patience -= 1
                     if current_patience <= 0:
-                        print('No patience left')
                         break
         self.val_loss = val_loss
 
