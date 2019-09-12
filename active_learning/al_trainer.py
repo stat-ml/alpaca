@@ -29,7 +29,7 @@ class ALTrainer:
             rmses.append(rmse)
 
             # update pool
-            uncertainties = self.estimator.estimate(x_pool, x_train, y_train)
+            uncertainties = self.estimator.estimate(x_pool, x_train)
             x_train, y_train, x_pool = self.sampler.update_sets(
                 x_train, y_train, x_pool, uncertainties, self.update_size, self.oracle
             )
