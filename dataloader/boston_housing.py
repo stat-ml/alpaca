@@ -1,4 +1,3 @@
-import os
 from os import path
 
 import pandas as pd
@@ -6,8 +5,8 @@ import numpy as np
 
 from experiment_setup import ROOT_DIR
 from .saver import DataSaver
+from .downloader import download
 from sklearn.model_selection import train_test_split
-import wget
 
 
 URL = 'https://archive.ics.uci.edu/ml/machine-learning-databases/housing/housing.data'
@@ -43,12 +42,7 @@ class BostonHousingData:
         return x, y
 
     def _build_dataset(self, cache_dir):
-        if not path.exists(cache_dir):
-            os.makedirs(cache_dir)
-        data_path = path.join(cache_dir, 'housing.data')
-        print(data_path)
-        if not path.exists(data_path):
-            wget.download(URL, data_path)
+        data_path = download(cache_dir, 'housing.data', URL)
         self.df = pd.read_table(data_path, names=self.column_names, header=None, delim_whitespace=True)
         table = self.df.to_numpy()
         self.train, self.val = train_test_split(table, test_size=self.val_split, shuffle=True)
