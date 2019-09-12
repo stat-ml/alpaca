@@ -74,7 +74,7 @@ class MLP(nn.Module):
                         break
         self.val_loss = val_loss
 
-    def evaluate(self, dataset):
+    def evaluate(self, dataset, y_scaler=None):
         """ Return model losses for provided data loader """
         data_loader = loader(*dataset)
         with torch.no_grad():
@@ -83,6 +83,9 @@ class MLP(nn.Module):
                 points = points.reshape(-1, self.layer_sizes[0]).to(self.device)
                 labels = labels.to(self.device)
                 outputs = self(points)
+                if y_scaler is not None:
+                    outputs = torch.Tensor(y_scaler.inverse_transform(outputs.cpu()))
+                    labels = torch.Tensor(y_scaler.inverse_transform(labels.cpu()))
                 losses.append(self.criterion(outputs, labels).item())
 
         return sum(losses)/len(losses)
