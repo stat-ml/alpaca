@@ -2,3 +2,4 @@ matplotlib
 pytorch
 xlrd
 requests
+pydoe

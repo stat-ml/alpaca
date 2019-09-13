@@ -7,7 +7,6 @@ from experiment_setup import ROOT_DIR
 from .saver import DataSaver
 from .downloader import download
 from sklearn.model_selection import train_test_split
-import wget
 
 
 URL = 'https://archive.ics.uci.edu/ml/machine-learning-databases/concrete/compressive/Concrete_Data.xls'
