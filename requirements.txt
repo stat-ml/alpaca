@@ -3,4 +3,4 @@ pytorch>=1.1.0
 xlrd>=1.2.0
 requests>=2.22.0
 pydoe>=0.3.8
-ddpy>=0.2.0
+dppy>=0.2.0
