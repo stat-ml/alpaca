@@ -97,14 +97,16 @@ class DPPMask:
         if layer_num not in self.layer_correlations:
             x_matrix = x.cpu().numpy()
             self.layer_correlations[layer_num] = np.abs(np.corrcoef(x_matrix.T))
-            K = self.layer_correlations[layer_num]
-            self.dpps[layer_num] = FiniteDPP('correlation', **{'K': K})
+            # self.dpps[layer_num] = FiniteDPP('correlation', **{'K': self.layer_correlations[layer_num]})
             return x.data.new(x.data.size()[-1]).fill_(1)
 
         mask = x.data.new(x.data.size()[-1]).fill_(0)
         k = int(len(mask) * (1 - dropout_rate))
-        self.ddps[layer_num].sample_exact_k_dpp(k)
-        ids = self.ddps.list_of_samples[-1]
+        # self.dpps[layer_num].sample_exact_k_dpp(k)
+        # ids = self.dpps[layer_num].list_of_samples[-1]
+        dpps = FiniteDPP('correlation', **{'K': self.layer_correlations[layer_num]})
+        dpps.sample_exact_k_dpp(k)
+        ids = dpps.list_of_samples[-1]
 
         mask[ids] = 1 / (1 - dropout_rate + 1e-10)
 
