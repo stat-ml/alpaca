@@ -3,6 +3,13 @@ from math import log2
 from scipy.stats import percentileofscore
 
 
+def get_uq_metrics(estimations, errors, acc_percentile=0.1):
+    acc = uq_accuracy(estimations, errors, acc_percentile)
+    ndcg = uq_ndcg(errors, estimations)
+    nll = uq_nll(errors, estimations)
+    return acc, ndcg, nll
+
+
 def uq_accuracy(uq, errors, percentile=0.1):
     """Shows intersection of worst by error/uq in percentile"""
     k = int(len(uq)*percentile)
