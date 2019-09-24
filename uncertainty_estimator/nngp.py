@@ -9,7 +9,7 @@ class NNGPRegression:
         self.diag_eps = diag_eps
         self.dropout_rate = dropout_rate
 
-    def estimate(self, x_pool, x_train, y_train):
+    def estimate(self, x_pool, x_train):
         train_pool_samples = np.concatenate([x_train, x_pool])
         train_len = len(x_train)
 
@@ -24,7 +24,7 @@ class NNGPRegression:
         Qt_K_Q = np.matmul(np.matmul(Qs.T, cov_matrix_inv), Qs)
         KKs = np.var(pool_samples, axis=1)
 
-        ws = np.diag(KKs - Qt_K_Q)
+        ws = KKs - np.diag(Qt_K_Q)
 
         gp_ue = [0 if w < 0 else np.sqrt(w) for w in np.ravel(ws)]
         return np.ravel(gp_ue)

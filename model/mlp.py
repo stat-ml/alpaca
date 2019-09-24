@@ -1,12 +1,13 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from dataloader.custom_dataset import loader
 
 
 class MLP(nn.Module):
-    def __init__(self, layer_sizes, learning_rate=1e-4, l2_reg=1e-5):
+    def __init__(self, layer_sizes, l2_reg=1e-5):
         super(MLP, self).__init__()
 
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -18,25 +19,27 @@ class MLP(nn.Module):
             fc = nn.Linear(layer, layer_sizes[i+1])
             setattr(self, 'fc'+str(i), fc)  # to register params
             self.fcs.append(fc)
-        self.relu = nn.LeakyReLU()
 
-        # self.optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate, weight_decay=l2_reg)
         self.optimizer = torch.optim.Adadelta(self.parameters(), weight_decay=l2_reg)
 
         self.double()
         self.to(self.device)
 
-    def forward(self, x, dropout_rate=0, train=False):
+    def forward(self, x, dropout_rate=0, train=False, dropout_mask=None):
         out = torch.DoubleTensor(x).to(self.device) if isinstance(x, np.ndarray) else x
 
-        for fc in self.fcs:
-            out = self.relu(fc(out))
-            out = nn.Dropout(dropout_rate)(out)
+        for layer_num, fc in enumerate(self.fcs[:-1]):
+            out = F.leaky_relu(fc(out))
+            if dropout_mask is None:
+                out = nn.Dropout(dropout_rate)(out)
+            else:
+                out = out*dropout_mask(out, dropout_rate, layer_num)
+        out = self.fcs[-1](out)
         return out if train else out.detach()
 
     def fit(
-            self, train_set, val_set, epochs=10000,
-            verbose=True, validation_step=100, patience=10, batch_size=500):
+            self, train_set, val_set, epochs=10000, verbose=True,
+            validation_step=100, patience=5, batch_size=500, dropout_rate=0):
         train_loader = loader(*train_set, batch_size=batch_size, shuffle=True)
 
         best_val_loss = float('inf')
@@ -50,7 +53,7 @@ class MLP(nn.Module):
                 labels = labels.to(self.device)
 
                 # Forward pass
-                outputs = self(points, train=True)
+                outputs = self(points, train=True, dropout_rate=dropout_rate)
                 loss = self.criterion(outputs, labels)
 
                 # Backward and optimize
@@ -68,10 +71,10 @@ class MLP(nn.Module):
                 else:
                     current_patience -= 1
                     if current_patience <= 0:
-                        print('No patience left')
                         break
+        self.val_loss = val_loss
 
-    def evaluate(self, dataset):
+    def evaluate(self, dataset, y_scaler=None):
         """ Return model losses for provided data loader """
         data_loader = loader(*dataset)
         with torch.no_grad():
@@ -80,6 +83,9 @@ class MLP(nn.Module):
                 points = points.reshape(-1, self.layer_sizes[0]).to(self.device)
                 labels = labels.to(self.device)
                 outputs = self(points)
+                if y_scaler is not None:
+                    outputs = torch.Tensor(y_scaler.inverse_transform(outputs.cpu()))
+                    labels = torch.Tensor(y_scaler.inverse_transform(labels.cpu()))
                 losses.append(self.criterion(outputs, labels).item())
 
         return sum(losses)/len(losses)
