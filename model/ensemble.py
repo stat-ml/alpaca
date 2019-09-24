@@ -3,7 +3,7 @@ from collections import OrderedDict
 from itertools import count
 import torch
 
-class MLPEnsamble:
+class MLPEnsemble:
     def __init__(self, layers, n_models, **kwargs):
         
         self.n_models = n_models
@@ -31,7 +31,7 @@ class MLPEnsamble:
         [m.eval() for m in self.models]
     
     def __call__(self, x):
-        res = torch.mean([m(x) for m in self.models])
+        res = torch.cat([m(x) for m in self.models], dim=1).mean(dim=1, keepdim=True)
         return res
 
     def _print_fit_status(self, n_model, n_models):
