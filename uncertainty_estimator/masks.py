@@ -5,6 +5,7 @@ from torch.autograd import Variable
 from pyDOE import lhs
 import numpy as np
 from scipy.special import softmax
+from dppy.finite_dpps import FiniteDPP
 
 
 class BasicMask:
@@ -86,3 +87,30 @@ class DecorrelationMask:
         self.layer_correlations = {}
 
 
+class DPPMask:
+    def __init__(self, scaling=False, dry_run=True):
+        self.layer_correlations = {}
+        self.dry_run = dry_run
+        self.dpps = {}
+
+    def __call__(self, x, dropout_rate=0.5, layer_num=0):
+        if layer_num not in self.layer_correlations:
+            x_matrix = x.cpu().numpy()
+            self.layer_correlations[layer_num] = np.abs(np.corrcoef(x_matrix.T))
+            # self.dpps[layer_num] = FiniteDPP('correlation', **{'K': self.layer_correlations[layer_num]})
+            return x.data.new(x.data.size()[-1]).fill_(1)
+
+        mask = x.data.new(x.data.size()[-1]).fill_(0)
+        k = int(len(mask) * (1 - dropout_rate))
+        # self.dpps[layer_num].sample_exact_k_dpp(k)
+        # ids = self.dpps[layer_num].list_of_samples[-1]
+        dpps = FiniteDPP('likelihood', **{'L': self.layer_correlations[layer_num]})
+        dpps.sample_exact_k_dpp(k)
+        ids = dpps.list_of_samples[-1]
+
+        mask[ids] = 1 / (1 - dropout_rate + 1e-10)
+
+        return x.data.new(mask)
+
+    def reset(self):
+        self.layer_correlations = {}
