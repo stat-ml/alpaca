@@ -104,7 +104,7 @@ class DPPMask:
         k = int(len(mask) * (1 - dropout_rate))
         # self.dpps[layer_num].sample_exact_k_dpp(k)
         # ids = self.dpps[layer_num].list_of_samples[-1]
-        dpps = FiniteDPP('correlation', **{'K': self.layer_correlations[layer_num]})
+        dpps = FiniteDPP('likelihood', **{'L': self.layer_correlations[layer_num]})
         dpps.sample_exact_k_dpp(k)
         ids = dpps.list_of_samples[-1]
 
