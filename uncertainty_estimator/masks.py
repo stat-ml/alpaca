@@ -8,6 +8,23 @@ from scipy.special import softmax
 from dppy.finite_dpps import FiniteDPP
 
 
+def build_masks(names=None, nn_runs=100):
+    masks = {
+        'vanilla': None,
+        'basic_mask': BasicMask(),
+        'lhs': LHSMask(nn_runs),
+        'lhs_shuffled': LHSMask(nn_runs, shuffle=True),
+        'mirror_random': MirrorMask(),
+        'decorrelating': DecorrelationMask(),
+        'decorr_sc': DecorrelationMask(scaling=True, dry_run=False),
+        'dpp': DPPMask()
+    }
+    if names is None:
+        return masks
+    else:
+        return {name: masks[name] for name in names}
+
+
 class BasicMask:
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         p = 1 - dropout_rate
