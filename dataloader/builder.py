@@ -3,6 +3,7 @@ from .concrete import ConcreteData
 from .energy_efficiency import EnergyEfficiencyData
 from .kin8nm import Kin8nmData
 from .naval_propulsion import NavalPropulsionData
+from .ccpp import CCPPData
 
 
 DATASETS = {
@@ -10,7 +11,8 @@ DATASETS = {
     'concrete': ConcreteData,
     'energy_efficiency': EnergyEfficiencyData,
     'kin8nm': Kin8nmData,
-    'naval_propulsion': NavalPropulsionData
+    'naval_propulsion': NavalPropulsionData,
+    'ccpp': CCPPData
 }
 
 
