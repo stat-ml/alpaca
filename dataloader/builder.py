@@ -6,6 +6,7 @@ from .naval_propulsion import NavalPropulsionData
 from .ccpp import CCPPData
 from .protein_structure import ProteinStructureData
 from .red_wine import RedWineData
+from .yacht_hydrodynamics import YachtHydrodynamicsData
 
 
 DATASETS = {
@@ -16,7 +17,8 @@ DATASETS = {
     'naval_propulsion': NavalPropulsionData,
     'ccpp': CCPPData,
     'protein_structure': ProteinStructureData,
-    'red_wine': RedWineData
+    'red_wine': RedWineData,
+    'yacht_hydrodynamics': YachtHydrodynamicsData
 }
 
 
