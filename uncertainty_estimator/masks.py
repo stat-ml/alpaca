@@ -17,7 +17,8 @@ def build_masks(names=None, nn_runs=100):
         'mirror_random': MirrorMask(),
         'decorrelating': DecorrelationMask(),
         'decorr_sc': DecorrelationMask(scaling=True, dry_run=False),
-        'dpp': DPPMask()
+        'dpp': DPPMask(),
+        'dpp_adaptive': DPPAdaptiveMask()
     }
     if names is None:
         return masks
@@ -105,7 +106,7 @@ class DecorrelationMask:
 
 
 class DPPMask:
-    def __init__(self, scaling=False, dry_run=True):
+    def __init__(self, dry_run=True):
         self.layer_correlations = {}
         self.dry_run = dry_run
         self.dpps = {}
@@ -114,16 +115,48 @@ class DPPMask:
         if layer_num not in self.layer_correlations:
             x_matrix = x.cpu().numpy()
             self.layer_correlations[layer_num] = np.abs(np.corrcoef(x_matrix.T))
-            # self.dpps[layer_num] = FiniteDPP('correlation', **{'K': self.layer_correlations[layer_num]})
             return x.data.new(x.data.size()[-1]).fill_(1)
 
         mask = x.data.new(x.data.size()[-1]).fill_(0)
         k = int(len(mask) * (1 - dropout_rate))
-        # self.dpps[layer_num].sample_exact_k_dpp(k)
-        # ids = self.dpps[layer_num].list_of_samples[-1]
         dpps = FiniteDPP('likelihood', **{'L': self.layer_correlations[layer_num]})
         dpps.sample_exact_k_dpp(k)
         ids = dpps.list_of_samples[-1]
+
+        mask[ids] = 1 / (1 - dropout_rate + 1e-10)
+
+        return x.data.new(mask)
+
+    def reset(self):
+        self.layer_correlations = {}
+
+
+class DPPAdaptiveMask:
+    def __init__(self, dry_run=True):
+        self.layer_correlations = {}
+        self.dry_run = dry_run
+        self.dpps = {}
+        self.ranks = {}
+
+    def _rank(self, dpp):
+        N = dpp.eig_vecs.shape[0]
+        tol = np.max(dpp.L_eig_vals) * N * np.finfo(np.float).eps
+        rank = np.count_nonzero(dpp.L_eig_vals > tol)
+        return rank
+
+    def __call__(self, x, dropout_rate=0.5, layer_num=0):
+        if layer_num not in self.layer_correlations:
+            x_matrix = x.cpu().numpy()
+            self.layer_correlations[layer_num] = np.abs(np.corrcoef(x_matrix.T))
+            self.dpps[layer_num] = FiniteDPP('correlation', **{'K': self.layer_correlations[layer_num]})
+            self.dpps[layer_num].sample_exact_k_dpp(1)  # to trigger eig values generation
+            self.ranks[layer_num] = self._rank(self.dpps[layer_num])
+            return x.data.new(x.data.size()[-1]).fill_(1)
+
+        mask = x.data.new(x.data.size()[-1]).fill_(0)
+        k = int(self.ranks[layer_num] * (1 - dropout_rate))
+        self.dpps[layer_num].sample_exact_k_dpp(k)
+        ids = self.dpps[layer_num].list_of_samples[-1]
 
         mask[ids] = 1 / (1 - dropout_rate + 1e-10)
 
