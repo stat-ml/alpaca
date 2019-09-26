@@ -47,5 +47,5 @@ if __name__ == '__main__':
     x_train, y_train = dataset.dataset('train')
     x_val, y_val = dataset.dataset('val')
     print(dataset.df.head())
-    print(x_val.shape, y_val.shape)
+    print(x_train.shape, y_train.shape, y_val.shape)
 
