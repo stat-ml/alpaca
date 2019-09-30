@@ -33,6 +33,12 @@ class MLPEnsemble:
     def __call__(self, x):
         res = torch.cat([m(x) for m in self.models], dim=1).mean(dim=1, keepdim=True)
         return res
+    
+    def compute_uncertainty(self, x, dropout_rate=0, train=False, repeat=1):
+        res = [m(x, dropout_rate, train) for i in range(repeat) for m in self.models]
+        res = torch.cat(res, dim=1)
+        res = res.std(dim=1, keepdim=True)
+        return res
 
     def _print_fit_status(self, n_model, n_models):
         print('Fit [{}/{}] model:'.format(n_model, n_models))
