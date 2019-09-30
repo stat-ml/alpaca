@@ -31,13 +31,12 @@ class MLPEnsemble:
         [m.eval() for m in self.models]
     
     def __call__(self, x):
-        res = torch.cat([m(x) for m in self.models], dim=1).mean(dim=1, keepdim=True)
+        res = torch.stack([m(x) for m in self.models]).mean(dim=0)
         return res
     
-    def compute_uncertainty(self, x, dropout_rate=0, train=False, repeat=1):
-        res = [m(x, dropout_rate, train) for i in range(repeat) for m in self.models]
-        res = torch.cat(res, dim=1)
-        res = res.std(dim=1, keepdim=True)
+    def compute_uncertainty(self, x, dropout_rate=0, train=False, dropout_mask=None, repeat=1):
+        res = [m(x, dropout_rate, train, dropout_mask) for i in range(repeat) for m in self.models]
+        res = torch.stack(res).std(dim=0)
         return res
 
     def _print_fit_status(self, n_model, n_models):
