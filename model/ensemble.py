@@ -13,7 +13,7 @@ class MLPEnsemble:
         for i, model in enumerate(self.models): 
             if verbose:
                 self._print_fit_status(i, self.n_models)
-            model.fit(train_set, val_set, verbose=True, **kwargs)
+            model.fit(train_set, val_set, verbose=verbose, **kwargs)
     
     def state_dict(self):
         state_dict = OrderedDict({'{} model'.format(n): m.state_dict() 
@@ -30,14 +30,13 @@ class MLPEnsemble:
     def eval(self):
         [m.eval() for m in self.models]
     
-    def __call__(self, x):
-        res = torch.stack([m(x) for m in self.models]).mean(dim=0)
+    def __call__(self, x, reduction='mean', **kwargs):
+        res = torch.stack([m(x, **kwargs) for m in self.models])
+        if reduction is None:
+            res = res
+        elif reduction == 'mean':
+            res = res.mean(dim=0)
         return res
     
-    def compute_uncertainty(self, x, dropout_rate=0, train=False, dropout_mask=None, repeat=1):
-        res = [m(x, dropout_rate, train, dropout_mask) for i in range(repeat) for m in self.models]
-        res = torch.stack(res).std(dim=0)
-        return res
-
     def _print_fit_status(self, n_model, n_models):
         print('Fit [{}/{}] model:'.format(n_model, n_models))
