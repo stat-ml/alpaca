@@ -18,7 +18,7 @@ def build_masks(names=None, nn_runs=100):
         'decorrelating': DecorrelationMask(),
         'decorr_sc': DecorrelationMask(scaling=True, dry_run=False),
         'dpp': DPPMask(),
-        'dpp_adaptive': DPPAdaptiveMask()
+        'adpp': DPPAdaptiveMask()
     }
     if names is None:
         return masks
@@ -114,14 +114,18 @@ class DPPMask:
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         if layer_num not in self.layer_correlations:
             x_matrix = x.cpu().numpy()
-            self.layer_correlations[layer_num] = np.abs(np.corrcoef(x_matrix.T))
+            # correlations = np.abs(np.corrcoef(x_matrix.T))
+            correlations = np.corrcoef(x_matrix.T)
+            self.layer_correlations[layer_num] = correlations
+            self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': correlations})
             return x.data.new(x.data.size()[-1]).fill_(1)
 
         mask = x.data.new(x.data.size()[-1]).fill_(0)
         k = int(len(mask) * (1 - dropout_rate))
-        dpps = FiniteDPP('likelihood', **{'L': self.layer_correlations[layer_num]})
-        dpps.sample_exact_k_dpp(k)
-        ids = dpps.list_of_samples[-1]
+        # dpps = FiniteDPP('likelihood', **{'L': self.layer_correlations[layer_num]})
+        dpp = self.dpps[layer_num]
+        dpp.sample_exact_k_dpp(k)
+        ids = dpp.list_of_samples[-1]
 
         mask[ids] = 1 / (1 - dropout_rate + 1e-10)
 
