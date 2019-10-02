@@ -17,7 +17,7 @@ def build_masks(names=None, nn_runs=100):
         'mirror_random': MirrorMask(),
         'decorrelating': DecorrelationMask(),
         'decorr_sc': DecorrelationMask(scaling=True, dry_run=False),
-        'dpp': DPPMask(),
+        # 'dpp': DPPMask(),
         'adpp': DPPAdaptiveMask()
     }
     if names is None:
@@ -114,10 +114,15 @@ class DPPMask:
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         if layer_num not in self.layer_correlations:
             x_matrix = x.cpu().numpy()
-            # correlations = np.abs(np.corrcoef(x_matrix.T))
-            correlations = np.corrcoef(x_matrix.T)
-            self.layer_correlations[layer_num] = correlations
+
+            correlations = np.abs(np.corrcoef(x_matrix.T))
+            print(correlations)
             self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': correlations})
+
+            # correlations = np.corrcoef(x_matrix.T)
+            # self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': correlations})
+
+            self.layer_correlations[layer_num] = correlations
             return x.data.new(x.data.size()[-1]).fill_(1)
 
         mask = x.data.new(x.data.size()[-1]).fill_(0)
