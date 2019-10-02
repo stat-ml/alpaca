@@ -6,8 +6,8 @@ from scipy.stats import percentileofscore
 def get_uq_metrics(estimations, errors, acc_percentile=0.1):
     acc = uq_accuracy(estimations, errors, acc_percentile)
     ndcg = uq_ndcg(errors, estimations)
-    nll = uq_nll(errors, estimations)
-    return acc, ndcg, nll
+    ll = uq_ll(errors, estimations)
+    return acc, ndcg, ll
 
 
 def uq_accuracy(uq, errors, percentile=0.1):
@@ -58,7 +58,7 @@ def uq_ndcg(errors, uq, bins=None):
     return ndcg(errors_digitized, uq)
 
 
-def uq_nll(errors, uq):
+def uq_ll(errors, uq):
     errors = np.ravel(errors)
     uq_squared = np.square(np.ravel(uq)) + 1e-10
-    return np.mean(np.log(uq_squared)/2 + np.square(errors)/2/uq_squared)
+    return -np.mean(np.log(uq_squared)/2 + np.square(errors)/2/uq_squared)

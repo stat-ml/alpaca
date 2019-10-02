@@ -12,8 +12,6 @@ DEFAULT_MASKS = ['vanilla', 'mirror_random', 'decorrelating', 'decorrelating_sc'
 
 
 def build_masks(names=None, nn_runs=100):
-    if names is None:
-        names = DEFAULT_MASKS
     masks = {
         'vanilla': None,
         'basic_mask': BasicMask(),
@@ -22,9 +20,11 @@ def build_masks(names=None, nn_runs=100):
         'mirror_random': MirrorMask(),
         'decorrelating': DecorrelationMask(),
         'decorrelating_sc': DecorrelationMask(scaling=True, dry_run=False),
-        'dpp': DPPMask(),
+        # 'dpp': DPPMask(),
         'adpp': DPPAdaptiveMask()
     }
+    if names is None:
+        return masks
     return {name: masks[name] for name in names}
 
 
