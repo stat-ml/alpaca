@@ -1,6 +1,5 @@
 import numpy as np
-import torch
-from .mcdue import MCDUE    
+import torch  
 
 class EnsembleUE:
     """
@@ -16,12 +15,14 @@ class EnsembleUE:
 
         return np.ravel(predictions.std(dim=0))
     
-class EnsembleMCDUE(MCDUE):
+class EnsembleMCDUE:
     """
     Estimate uncertainty for samples with Ensemble and MCDUE approach
     """ 
     def __init__(self, net, nn_runs=5, dropout_rate=.5):
-        super(EnsembleMCDUE, self).__init__(net, nn_runs, dropout_rate)
+        self.net = net
+        self.nn_runs = nn_runs
+        self.dropout_rate = dropout_rate
         self.n_models = self.net.n_models
     
     def estimate(self, X_pool, *args):
