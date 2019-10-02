@@ -8,7 +8,12 @@ from scipy.special import softmax
 from dppy.finite_dpps import FiniteDPP
 
 
+DEFAULT_MASKS = ['vanilla', 'mirror_random', 'decorrelating', 'decorrelating_sc', 'adpp']
+
+
 def build_masks(names=None, nn_runs=100):
+    if names is None:
+        names = DEFAULT_MASKS
     masks = {
         'vanilla': None,
         'basic_mask': BasicMask(),
@@ -16,14 +21,11 @@ def build_masks(names=None, nn_runs=100):
         'lhs_shuffled': LHSMask(nn_runs, shuffle=True),
         'mirror_random': MirrorMask(),
         'decorrelating': DecorrelationMask(),
-        'decorr_sc': DecorrelationMask(scaling=True, dry_run=False),
-        # 'dpp': DPPMask(),
+        'decorrelating_sc': DecorrelationMask(scaling=True, dry_run=False),
+        'dpp': DPPMask(),
         'adpp': DPPAdaptiveMask()
     }
-    if names is None:
-        return masks
-    else:
-        return {name: masks[name] for name in names}
+    return {name: masks[name] for name in names}
 
 
 class BasicMask:
@@ -114,20 +116,13 @@ class DPPMask:
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         if layer_num not in self.layer_correlations:
             x_matrix = x.cpu().numpy()
-
             correlations = np.abs(np.corrcoef(x_matrix.T))
-            print(correlations)
             self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': correlations})
-
-            # correlations = np.corrcoef(x_matrix.T)
-            # self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': correlations})
-
             self.layer_correlations[layer_num] = correlations
             return x.data.new(x.data.size()[-1]).fill_(1)
 
         mask = x.data.new(x.data.size()[-1]).fill_(0)
         k = int(len(mask) * (1 - dropout_rate))
-        # dpps = FiniteDPP('likelihood', **{'L': self.layer_correlations[layer_num]})
         dpp = self.dpps[layer_num]
         dpp.sample_exact_k_dpp(k)
         ids = dpp.list_of_samples[-1]
