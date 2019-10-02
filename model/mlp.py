@@ -27,7 +27,7 @@ class MLP(nn.Module):
 
     def forward(self, x, dropout_rate=0, train=False, dropout_mask=None):
         out = torch.DoubleTensor(x).to(self.device) if isinstance(x, np.ndarray) else x
-        out = self.fcs[0](out)
+        out = F.leaky_relu(self.fcs[0](out))
 
         for layer_num, fc in enumerate(self.fcs[1:-1]):
             out = F.leaky_relu(fc(out))
