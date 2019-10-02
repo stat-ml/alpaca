@@ -20,7 +20,7 @@ def build_masks(names=None, nn_runs=100):
         'mirror_random': MirrorMask(),
         'decorrelating': DecorrelationMask(),
         'decorrelating_sc': DecorrelationMask(scaling=True, dry_run=False),
-        'dpp': DPPMask(),
+        # 'dpp': DPPMask(),
         'adpp': DPPAdaptiveMask()
     }
     if names is None:
