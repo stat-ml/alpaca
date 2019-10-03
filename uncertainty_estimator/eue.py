@@ -21,7 +21,7 @@ class EnsembleMCDUE:
                 mcd_realizations.append(prediction)
         
         mcd_realizations = torch.cat(mcd_realizations, dim=1)
-        return np.ravel(mcd_realizations.std(dim=1, unbiased=False))
+        return np.ravel(mcd_realizations.std(dim=0, unbiased=False))
     
     
 class EnsembleUE(EnsembleMCDUE):
