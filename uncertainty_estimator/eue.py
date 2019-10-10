@@ -20,7 +20,7 @@ class EnsembleMCDUE:
                 prediction = prediction.to('cpu')
                 mcd_realizations.append(prediction)
         
-        mcd_realizations = torch.cat(mcd_realizations, dim=1)
+        mcd_realizations = torch.cat(mcd_realizations, dim=0)
         return np.ravel(mcd_realizations.std(dim=0, unbiased=False))
     
     
