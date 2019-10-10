@@ -7,6 +7,7 @@ import torch
 from model.mlp import MLP
 from uncertainty_estimator.nngp import NNGPRegression
 from uncertainty_estimator.mcdue import MCDUE, MCDUEMasked
+from uncertainty_estimator.eue import EnsembleUE, EnsembleMCDUE
 from uncertainty_estimator.random_estimator import RandomEstimator
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -21,6 +22,10 @@ def build_estimator(name, model, **kwargs):
         estimator = MCDUE(model, **kwargs)
     elif name == 'mcdue_masked':
         estimator = MCDUEMasked(model, **kwargs)
+    elif name == 'eue':
+        estimator = EnsembleUE(model, **kwargs)
+    elif name == 'emcdue':
+        estimator = EnsembleMCDUE(model, **kwargs)
     else:
         raise ValueError("Wrong estimator name")
     return estimator
