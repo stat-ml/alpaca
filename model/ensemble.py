@@ -4,10 +4,11 @@ from itertools import count
 import torch
 
 class MLPEnsemble:
-    def __init__(self, layers, n_models, **kwargs):
+    def __init__(self, layers, n_models, reduction='mean', **kwargs):
         
         self.n_models = n_models
         self.models = [MLP(layers, **kwargs) for i in range(n_models)]
+        self.reduction = reduction
 
     def fit(self, train_set, val_set, verbose=True, **kwargs):
         for i, model in enumerate(self.models): 
@@ -30,12 +31,19 @@ class MLPEnsemble:
     def eval(self):
         [m.eval() for m in self.models]
     
-    def __call__(self, x, reduction='mean', **kwargs):
+    def __call__(self, x, reduction='default', **kwargs):
         res = torch.stack([m(x, **kwargs) for m in self.models])
+        if reduction == 'default':
+            reduction = self.reduction
         if reduction is None:
             res = res
         elif reduction == 'mean':
             res = res.mean(dim=0)
+        elif reduction == 'nll':
+            means = res[:, :, 0]
+            sigmas = res[:, :, 1]
+            res = torch.stack([means.mean(dim=0), sigmas.mean(dim=0) +
+                               (means**2).mean(dim=0) - means.mean(dim=0)**2])
         return res
     
     def _print_fit_status(self, n_model, n_models):
