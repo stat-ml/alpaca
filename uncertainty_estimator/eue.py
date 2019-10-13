@@ -30,3 +30,18 @@ class EnsembleUE(EnsembleMCDUE):
     """
     def __init__(self, net):
         super(EnsembleUE, self).__init__(net, nn_runs=1, dropout_rate=0)
+        
+             
+class NLLEnsembleUE():
+    """
+    Estimate uncertainty for samples with Ensemble approach
+    """
+    def __init__(self, net):
+        self.net = net
+        
+    def estimate(self, X_pool, **kwargs):
+        with torch.no_grad():
+            mean, sigma = self.net(X_pool, reduction='nll')
+            sigma = np.sqrt(sigma.to('cpu'))
+            
+        return np.ravel(sigma)
