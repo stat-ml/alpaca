@@ -43,7 +43,7 @@ class MLPEnsemble:
             means = res[:, :, 0]
             sigmas = res[:, :, 1]
             res = torch.stack([means.mean(dim=0), sigmas.mean(dim=0) +
-                               (means**2).mean(dim=0) - means.mean(dim=0)**2])
+                               (means**2).mean(dim=0) - means.mean(dim=0)**2], dim=1)
         return res
     
     def _print_fit_status(self, n_model, n_models):
