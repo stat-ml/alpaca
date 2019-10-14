@@ -41,7 +41,8 @@ class NLLEnsembleUE():
         
     def estimate(self, X_pool, **kwargs):
         with torch.no_grad():
-            mean, sigma = self.net(X_pool, reduction='nll')
-            sigma = np.sqrt(sigma.to('cpu'))
+            res = self.net(X_pool, reduction='nll')
+            sigma = res[:, 1].to('cpu')
+            sigma = np.sqrt(sigma)
             
         return np.ravel(sigma)
