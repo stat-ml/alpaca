@@ -5,13 +5,11 @@ import torch.nn.functional as F
 
 from dataloader.custom_dataset import loader
 
-
-class MLP(nn.Module):
-    def __init__(self, layer_sizes, l2_reg=1e-5):
-        super(MLP, self).__init__()
+class BaseMLP(nn.Module):
+    def __init__(self, layer_sizes, postprocessing=lambda x: x):
+        super(BaseMLP, self).__init__()
 
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.criterion = nn.MSELoss()
 
         self.layer_sizes = layer_sizes
         self.fcs = []
@@ -19,9 +17,8 @@ class MLP(nn.Module):
             fc = nn.Linear(layer, layer_sizes[i+1])
             setattr(self, 'fc'+str(i), fc)  # to register params
             self.fcs.append(fc)
-
-        self.optimizer = torch.optim.Adadelta(self.parameters(), weight_decay=l2_reg)
-
+        self.postprocessing = postprocessing
+        
         self.double()
         self.to(self.device)
 
@@ -36,6 +33,7 @@ class MLP(nn.Module):
             else:
                 out = out*dropout_mask(out, dropout_rate, layer_num)
         out = self.fcs[-1](out)
+        out = self.postprocessing(out)
         return out if train else out.detach()
 
     def fit(
@@ -94,3 +92,28 @@ class MLP(nn.Module):
     def _print_status(self, epoch, epochs, loss, val_loss):
         print('Epoch [{}/{}], Loss: {:.4f}, Validation loss: {:.4f}'
               .format(epoch + 1, epochs, loss, val_loss))
+
+class MLP(BaseMLP):
+    def __init__(self, layer_sizes, l2_reg=1e-5,
+                 postprocessing=lambda x: x, loss=nn.MSELoss, 
+                 optimizer={'type': 'Adadelta', 'weight_decay':1e-5}):
+        super(MLP, self).__init__(layer_sizes, postprocessing)
+        #l2_reg is USELESS. In future we have to remove it
+        self.criterion = loss()
+        self.optimizer = self.init_optimizer(optimizer)
+
+        
+    def init_optimizer(self, optimizer):
+        
+        if isinstance(optimizer, dict):
+            kwargs = optimizer.copy()
+            opt_type = getattr(torch.optim, kwargs.pop('type'))
+            kwargs['params'] = self.parameters()
+            optimizer = opt_type(**kwargs)
+        elif not isinstance(optimizer, torch.optim.Optimizer):
+            raise TypeError(
+                'optimizer must be either an Optimizer object or a dict, '
+                'but got {}'.format(type(optimizer)))
+        return optimizer
+        
+        
