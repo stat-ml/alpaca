@@ -38,7 +38,6 @@ class ProteinStructureData:
         self.data = {
             'train': train,
             'val': val,
-            'all': np.concatenate((train, val))
         }
 
 
