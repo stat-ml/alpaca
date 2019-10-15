@@ -4,6 +4,7 @@ import torch
 class EnsembleMCDUE:
     """
     Estimate uncertainty for samples with Ensemble and MCDUE approach
+    Propose that ensemble contains nets with one output
     """ 
     def __init__(self, net, nn_runs=5, dropout_rate=.5):
         self.net = net
@@ -26,15 +27,17 @@ class EnsembleMCDUE:
     
 class EnsembleUE(EnsembleMCDUE):
     """
-    Estimate uncertainty for samples with Ensemble approach
+    Estimate uncertainty for samples with Ensemble approach.
+    Propose that ensemble contains nets with one output
     """
     def __init__(self, net):
         super(EnsembleUE, self).__init__(net, nn_runs=1, dropout_rate=0)
         
              
-class NLLEnsembleUE():
+class EnsembleNLLUE():
     """
-    Estimate uncertainty for samples with Ensemble approach
+    Estimate uncertainty for samples with Ensemble approach.
+    Ensemble must contains nets with two outputs: mean and sigma_squared
     """
     def __init__(self, net):
         self.net = net
