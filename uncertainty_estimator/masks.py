@@ -8,7 +8,7 @@ from scipy.special import softmax
 from dppy.finite_dpps import FiniteDPP
 
 
-DEFAULT_MASKS = ['vanilla', 'mirror_random', 'decorrelating', 'decorrelating_sc', 'adpp']
+DEFAULT_MASKS = ['vanilla', 'mirror_random', 'decorrelating', 'decorrelating_sc', 'dpp']
 
 
 def build_masks(names=None, nn_runs=100):
@@ -20,7 +20,7 @@ def build_masks(names=None, nn_runs=100):
         'mirror_random': MirrorMask(),
         'decorrelating': DecorrelationMask(),
         'decorrelating_sc': DecorrelationMask(scaling=True, dry_run=False),
-        # 'dpp': DPPMask(),
+        'dpp': DPPMask(),
         'adpp': DPPAdaptiveMask()
     }
     if names is None:
@@ -115,19 +115,25 @@ class DPPMask:
 
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         if layer_num not in self.layer_correlations:
+            # warm-up, generatign correlations masks
             x_matrix = x.cpu().numpy()
-            correlations = np.abs(np.corrcoef(x_matrix.T))
-            self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': correlations})
+            correlations = np.corrcoef(x_matrix.T)
+            self.dpps[layer_num] = FiniteDPP('correlation', **{'K': correlations})
             self.layer_correlations[layer_num] = correlations
             return x.data.new(x.data.size()[-1]).fill_(1)
 
         mask = x.data.new(x.data.size()[-1]).fill_(0)
+
+        # sampling nodes ids
         k = int(len(mask) * (1 - dropout_rate))
         dpp = self.dpps[layer_num]
-        dpp.sample_exact_k_dpp(k)
+        dpp.sample_exact()
         ids = dpp.list_of_samples[-1]
+        if len(ids) > k:
+            ids = np.random.choice(ids, k)
 
-        mask[ids] = 1 / (1 - dropout_rate + 1e-10)
+        # scaling
+        mask[ids] = len(mask)/len(ids)
 
         return x.data.new(mask)
 
