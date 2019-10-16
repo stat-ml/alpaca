@@ -83,34 +83,5 @@ class VAE(nn.Module):
         return result[0].tolist()
 
 
-def get_vae(restore, rosen, patience, epochs=100):
-    x_pool, y_pool = rosen.dataset('pool')
-    x_train, y_train = rosen.dataset('train')
-    x_val, y_val = rosen.dataset('train')
-    x = np.concatenate((x_train, x_pool))
-
-    vae_path = 'model/data/vae.ckpt'
-    vae = VAE(10, 10, 2)
-    if restore:
-        vae.load_state_dict(torch.load(vae_path))
-    else:
-        current_patience = patience
-        best_loss = float('inf')
-
-        for epoch in range(epochs):
-            vae.fit(x)
-            if (epoch+1) % 100 == 0:
-                val_loss = vae.evaluate(x_val)
-                print('{} ====> Val set loss: {:.4f}'.format(epoch+1, val_loss))
-                if val_loss < best_loss:
-                    best_loss = val_loss
-                    current_patience = patience
-                else:
-                    current_patience -= 1
-                    if current_patience <= 0:
-                        print("No patience left")
-                        break
-        torch.save(vae.state_dict(), vae_path)
-    return vae
 
 

@@ -8,7 +8,7 @@ from scipy.special import softmax
 from dppy.finite_dpps import FiniteDPP
 
 
-DEFAULT_MASKS = ['vanilla', 'mirror_random', 'decorrelating', 'decorrelating_sc', 'dpp']
+DEFAULT_MASKS = ['vanilla', 'mirror_random', 'decorrelating', 'decorrelating_sc', 'dpp', 'adpp']
 
 
 def build_masks(names=None, nn_runs=100):
