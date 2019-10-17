@@ -5,6 +5,7 @@ import torch.nn.functional as F
 
 from dataloader.custom_dataset import loader
 
+
 class BaseMLP(nn.Module):
     def __init__(self, layer_sizes, postprocessing=lambda x: x):
         super(BaseMLP, self).__init__()
@@ -104,7 +105,6 @@ class MLP(BaseMLP):
 
         
     def init_optimizer(self, optimizer):
-        
         if isinstance(optimizer, dict):
             kwargs = optimizer.copy()
             opt_type = getattr(torch.optim, kwargs.pop('type'))

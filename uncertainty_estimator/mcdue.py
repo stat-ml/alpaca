@@ -49,3 +49,9 @@ class MCDUEMasked:
 
         return np.ravel(np.std(mcd_realizations, axis=1))
 
+    def reset(self):
+        if hasattr(self.dropout_mask, 'reset'):
+            self.dropout_mask.reset()
+
+
+

@@ -49,10 +49,10 @@ def uq_ndcg(errors, uq, bins=None):
     so we restructure errors to give top errors bigger relevance
     """
     if bins is None:
-        bins = [80, 90, 95, 99]
+        bins = [60, 80, 85, 90, 92, 95, 96, 97, 98, 99]
 
-    sorted_erros = sorted(errors)
-    errors_percentiles = [percentileofscore(sorted_erros, error) for error in errors]
+    sorted_errors = sorted(errors)
+    errors_percentiles = [percentileofscore(sorted_errors, error) for error in errors]
     errors_digitized = np.digitize(errors_percentiles, bins)
 
     return ndcg(errors_digitized, uq)
