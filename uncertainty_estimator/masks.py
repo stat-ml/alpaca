@@ -9,12 +9,14 @@ from dppy.finite_dpps import FiniteDPP
 
 
 DEFAULT_MASKS = ['vanilla', 'mirror_random', 'decorrelating', 'decorrelating_sc', 'dpp', 'adpp']
+BASIC_MASKS = ['vanilla', 'basic_mask', 'basic_bern', 'dpp']
 
 
 def build_masks(names=None, nn_runs=100):
     masks = {
         'vanilla': None,
         'basic_mask': BasicMask(),
+        'basic_bern': BasicMaskBernoulli(),
         'lhs': LHSMask(nn_runs),
         'lhs_shuffled': LHSMask(nn_runs, shuffle=True),
         'mirror_random': MirrorMask(),
@@ -37,6 +39,30 @@ class BasicMask:
         mask = mask * (len(mask)/(nonzero_count + 1e-10))
 
         return mask
+
+
+class BasicMaskBernoulli:
+    def __call__(self, x, dropout_rate=0.5, layer_num=0):
+        p = 1 - dropout_rate
+
+        if p < 0 or p > 1:
+            raise ValueError("dropout probability has to be between 0 and 1, "
+                             "but got {}".format(p))
+
+        noise = self._make_noise(x)
+        if p == 0:
+            noise.fill_(0)
+        else:
+            noise.bernoulli_(p).div_(p)
+
+        noise = noise.expand_as(x)
+        return noise
+
+
+    @staticmethod
+    def _make_noise(input):
+        return input.new().resize_as_(input)
+
 
 
 class LHSMask:
