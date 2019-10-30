@@ -8,8 +8,8 @@ from scipy.special import softmax
 from dppy.finite_dpps import FiniteDPP
 
 
-DEFAULT_MASKS = ['vanilla', 'mirror_random', 'decorrelating', 'decorrelating_sc', 'dpp', 'adpp']
-BASIC_MASKS = ['vanilla', 'basic_mask', 'basic_bern', 'dpp']
+DEFAULT_MASKS = ['vanilla', 'mirror_random', 'decorrelating', 'decorrelating_sc', 'dpp', 'rank_dpp']
+BASIC_MASKS = ['vanilla', 'basic_mask', 'basic_bern', 'dpp', 'rank_dpp']
 
 
 def build_masks(names=None, nn_runs=100):
@@ -23,7 +23,7 @@ def build_masks(names=None, nn_runs=100):
         'decorrelating': DecorrelationMask(),
         'decorrelating_sc': DecorrelationMask(scaling=True, dry_run=False),
         'dpp': DPPMask(),
-        'adpp': DPPAdaptiveMask()
+        'rank_dpp': DPPRankMask()
     }
     if names is None:
         return masks
@@ -167,7 +167,7 @@ class DPPMask:
         self.layer_correlations = {}
 
 
-class DPPAdaptiveMask:
+class DPPRankMask:
     def __init__(self, dry_run=True):
         self.layer_correlations = {}
         self.dry_run = dry_run
