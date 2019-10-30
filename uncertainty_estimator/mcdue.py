@@ -22,7 +22,6 @@ class MCDUE:
         return np.ravel(np.std(mcd_realizations, axis=1))
 
 
-
 class MCDUEMasked:
     """
     Estimate uncertainty for samples with MCDUE approach
@@ -62,7 +61,7 @@ class MCDUEMasked:
     def last_mcd_runs(self):
         """Return model prediction for last uncertainty estimation"""
         if not self.keep_runs:
-            print("mdc_runs: You should set `keep_runs=True` to properly use this method")
+            print("mcd_runs: You should set `keep_runs=True` to properly use this method")
         return self._mcd_runs
 
 

@@ -43,7 +43,7 @@ def set_random(random_seed):
 
 def get_model(model, model_path, train_set=None, val_set=None, retrain=False, **kwargs):
     model_path = os.path.join(ROOT_DIR, model_path)
-    if retrain:
+    if retrain or not os.path.exists(model_path):
         if train_set is None or val_set is None:
             raise RuntimeError("You should pass datasets for retrain")
         model.fit(train_set, val_set, **kwargs)
