@@ -13,7 +13,7 @@ class MLPEnsemble:
     def fit(self, train_set, val_set, verbose=True, **kwargs):
         for i, model in enumerate(self.models): 
             if verbose:
-                self._print_fit_status(i, self.n_models)
+                self._print_fit_status(i+1, self.n_models)
             model.fit(train_set, val_set, verbose=verbose, **kwargs)
     
     def state_dict(self):
