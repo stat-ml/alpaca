@@ -94,6 +94,7 @@ class BaseMLP(nn.Module):
         print('Epoch [{}/{}], Loss: {:.4f}, Validation loss: {:.4f}'
               .format(epoch + 1, epochs, loss, val_loss))
 
+
 class MLP(BaseMLP):
     def __init__(self, layer_sizes, l2_reg=1e-5,
                  postprocessing=lambda x: x, loss=nn.MSELoss, 
