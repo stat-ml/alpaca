@@ -26,7 +26,8 @@ class Openml:
             x, y = self.saver.load()
 
         if self.val_size != 0:
-            x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=self.val_size, shuffle=True)
+            x_train, x_val, y_train, y_val = train_test_split(
+                x, y, test_size=self.val_size, shuffle=True, stratify=y)
         else:
             x_train, y_train = x, y
             x_val, y_val = [], []

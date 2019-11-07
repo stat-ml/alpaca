@@ -6,14 +6,13 @@ from torch.utils.data import TensorDataset, DataLoader
 
 
 class Trainer:
-    def __init__(self, model, batch_size=128, lr=1e-3, dropout_train=0.5, dropout_uq=0.5):
+    def __init__(self, model, batch_size=128, lr=1e-3, dropout_train=0.5):
         self.model = model
         self.device = 'cuda'
         self.model.to(self.device)
 
         # self.optimizer = torch.optim.Adam(model.parameters(), lr=lr)
         self.optimizer = torch.optim.Adadelta(model.parameters())
-        self.dropout_uq = dropout_uq
         self.dropout_train = dropout_train
         self.batch_size = batch_size
 
@@ -51,7 +50,7 @@ class Trainer:
     def __call__(self, x, dropout_rate=0.5, dropout_mask=None):
         self.model.train()
         x = torch.FloatTensor(x).to(self.device)
-        return self.model(x, dropout_rate=self.dropout_uq)
+        return self.model(x, dropout_rate=dropout_rate, dropout_mask=dropout_mask)
 
 
 class SimpleConv(nn.Module):
@@ -59,8 +58,8 @@ class SimpleConv(nn.Module):
         super().__init__()
         self.conv1 = nn.Conv2d(1, 32, 3)
         self.conv2 = nn.Conv2d(32, 64, 3)
-        self.dropout = nn.Dropout(0.5)
         self.fc1 = nn.Linear(12*12*64, 128)
+        self.dropout = nn.Dropout(0.5)
         self.fc2 = nn.Linear(128, 10)
 
     def forward(self, x, dropout_rate=0., dropout_mask=None):
@@ -68,6 +67,7 @@ class SimpleConv(nn.Module):
         x = F.relu(self.conv2(x))
         x = F.max_pool2d(x, 2, 2)
         x = x.view(-1, 12*12*64)
+        print(x.shape)
         x = self._dropout(x, dropout_mask, dropout_rate, 0)
         x = F.relu(self.fc1(x))
         x = self._dropout(x, dropout_mask, dropout_rate, 1)

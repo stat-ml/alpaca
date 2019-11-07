@@ -28,7 +28,7 @@ class BaldMasked:
     """
     Estimate uncertainty for samples with MCDUE approach
     """
-    def __init__(self, net, num_classes=1, nn_runs=25, dropout_rate=.5, dropout_mask=None, keep_runs=False):
+    def __init__(self, net, nn_runs=25, dropout_mask=None, dropout_rate=.5, num_classes=1, keep_runs=False):
         self.net = net
         self.nn_runs = nn_runs
         self.num_classes = num_classes
