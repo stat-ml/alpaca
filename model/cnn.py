@@ -48,7 +48,7 @@ class Trainer:
         loader = DataLoader(ds, batch_size=self.batch_size, shuffle=shuffle)
         return loader
 
-    def __call__(self, x, dropout_rate=0.5):
+    def __call__(self, x, dropout_rate=0.5, dropout_mask=None):
         self.model.train()
         x = torch.FloatTensor(x).to(self.device)
         return self.model(x, dropout_rate=self.dropout_uq)
@@ -59,17 +59,26 @@ class SimpleConv(nn.Module):
         super().__init__()
         self.conv1 = nn.Conv2d(1, 32, 3)
         self.conv2 = nn.Conv2d(32, 64, 3)
+        self.dropout = nn.Dropout(0.5)
         self.fc1 = nn.Linear(12*12*64, 128)
         self.fc2 = nn.Linear(128, 10)
 
-    def forward(self, x, dropout_rate=0.):
+    def forward(self, x, dropout_rate=0., dropout_mask=None):
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.max_pool2d(x, 2, 2)
         x = x.view(-1, 12*12*64)
-        x = F.dropout(x, dropout_rate)
+        x = self._dropout(x, dropout_mask, dropout_rate, 0)
         x = F.relu(self.fc1(x))
-        x = F.dropout(x, dropout_rate)
+        x = self._dropout(x, dropout_mask, dropout_rate, 1)
         x = self.fc2(x)
         return x
+
+    def _dropout(self, x, dropout_mask, dropout_rate, layer_num):
+        if dropout_mask is None:
+            x = self.dropout(x)
+        else:
+            x = x * dropout_mask(x, dropout_rate, layer_num)
+        return x
+
 
