@@ -9,6 +9,7 @@ from uncertainty_estimator.nngp import NNGPRegression
 from uncertainty_estimator.mcdue import MCDUE, MCDUEMasked
 from uncertainty_estimator.eue import EnsembleUE, EnsembleMCDUE, EnsembleNLLUE, EnsembleMCDUEMasked
 from uncertainty_estimator.random_estimator import RandomEstimator
+from uncertainty_estimator.bald import MCDUEBald
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -22,6 +23,8 @@ def build_estimator(name, model, **kwargs):
         estimator = MCDUE(model, **kwargs)
     elif name == 'mcdue_masked':
         estimator = MCDUEMasked(model, **kwargs)
+    elif name == 'bald':
+        estimator = MCDUEBald(model, **kwargs)
     elif name == 'eue_nll':
         estimator = EnsembleNLLUE(model, **kwargs)    
     elif name == 'eue':
