@@ -28,7 +28,7 @@ class MCDUEBald:
         # return np.ravel(np.std(mcd_realizations, axis=1))
 
     def _entropy(self, x):
-        return np.sum(-x*np.log(x), axis=-1)
+        return np.sum(-x*np.log(np.clip(x, 1e-6, 1)), axis=-1)
 
     def _bald(self, logits):
         # logits_samples = np.stack(
