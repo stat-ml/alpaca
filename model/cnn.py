@@ -47,10 +47,15 @@ class Trainer:
         loader = DataLoader(ds, batch_size=self.batch_size, shuffle=shuffle)
         return loader
 
-    def __call__(self, x, dropout_rate=0.5, dropout_mask=None):
-        self.model.train()
+    def __call__(self, x, dropout_rate=0., dropout_mask=None):
         x = torch.FloatTensor(x).to(self.device)
         return self.model(x, dropout_rate=dropout_rate, dropout_mask=dropout_mask)
+
+    def train(self):
+        self.model.train()
+
+    def eval(self):
+        self.model.eval()
 
 
 class SimpleConv(nn.Module):
