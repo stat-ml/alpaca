@@ -9,7 +9,7 @@ from uncertainty_estimator.nngp import NNGPRegression
 from uncertainty_estimator.mcdue import MCDUE, MCDUEMasked
 from uncertainty_estimator.eue import EnsembleUE, EnsembleMCDUE, EnsembleNLLUE, EnsembleMCDUEMasked
 from uncertainty_estimator.random_estimator import RandomEstimator
-from uncertainty_estimator.bald import Bald, BaldMasked
+from uncertainty_estimator.bald import Bald, BaldMasked, BaldEnsemble
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -27,10 +27,12 @@ def build_estimator(name, model, **kwargs):
         estimator = Bald(model, **kwargs)
     elif name == 'bald_masked':
         estimator = BaldMasked(model, **kwargs)
+    elif name == 'bald_ensemble':
+        estimator = BaldEnsemble(model, **kwargs)
     elif name == 'eue_nll':
-        estimator = EnsembleNLLUE(model, **kwargs)    
+        estimator = EnsembleNLLUE(model)
     elif name == 'eue':
-        estimator = EnsembleUE(model, **kwargs)
+        estimator = EnsembleUE(model)
     elif name == 'emcdue':
         estimator = EnsembleMCDUE(model, **kwargs)
     elif name == 'emcdue_masked':
@@ -60,4 +62,3 @@ def get_model(model, model_path, train_set=None, val_set=None, retrain=False, **
         model.load_state_dict(torch.load(model_path, map_location=torch.device(device)))
         model.eval()
     return model
-

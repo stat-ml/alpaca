@@ -69,6 +69,21 @@ class BaldMasked:
         return self._mcd_runs
 
 
+class BaldEnsemble:
+    """
+    Estimate uncertainty in classification tasks for samples with Ensemble approach
+    """
+    def __init__(self, ensemble, num_classes=1):
+        self.ensemble = ensemble
+        self.num_classes = num_classes
+
+    def estimate(self, x_pool, *args):
+        with torch.no_grad():
+            logits = np.array(self.ensemble(x_pool, reduction=None).cpu())
+
+        return _bald(np.swapaxes(logits, 0, 1))
+
+
 def _entropy(x):
     return np.sum(-x*np.log(np.clip(x, 1e-6, 1)), axis=-1)
 

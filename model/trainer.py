@@ -76,12 +76,15 @@ class EnsembleTrainer:
             predictions = self(x).argmax(dim=1, keepdim=True)
         return predictions.cpu().numpy()
 
-    def __call__(self, x, **kwargs):
+    def __call__(self, x, reduction='default', **kwargs):
         res = torch.stack([trainer(x, **kwargs) for trainer in self.trainers])
 
-        if self.reduction is None:
+        if reduction == 'default':
+            reduction = self.reduction
+
+        if reduction is None:
             res = res
-        elif self.reduction == 'mean':
+        elif reduction == 'mean':
             res = res.mean(dim=0)
 
         return res
