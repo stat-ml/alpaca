@@ -15,7 +15,7 @@ class Trainer:
         self.batch_size = batch_size
 
 
-    def fit(self, x, y, epochs=10, log_interval=50):
+    def fit(self, x, y, epochs=10, log_interval=50, verbose=False):
         self.model.train()
         loader = self._to_loader(x, y)
 
@@ -28,10 +28,11 @@ class Trainer:
                 loss.backward()
                 self.optimizer.step()
 
-                if batch_idx % log_interval == 0:
-                    print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                        epoch, batch_idx * len(data), len(loader.dataset),
-                                   100. * batch_idx / len(loader), loss.item()))
+                if verbose:
+                    if batch_idx % log_interval == 0:
+                        print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                            epoch, batch_idx * len(data), len(loader.dataset),
+                                       100. * batch_idx / len(loader), loss.item()))
 
     def predict(self, x):
         self.eval()
