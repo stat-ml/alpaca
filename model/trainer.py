@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader
@@ -15,30 +16,44 @@ class Trainer:
         self.batch_size = batch_size
 
 
-    def fit(self, x, y, epochs=10, log_interval=50, verbose=False):
+    def fit(self, train_set, val_set, epochs=10, log_interval=50, verbose=False):
         self.model.train()
-        loader = self._to_loader(x, y)
+        loader = self._to_loader(*train_set)
+        val_loader = self._to_loader(*val_set)
 
         for epoch in range(epochs):
             for batch_idx, (data, target) in enumerate(loader):
                 data, target = data.to(self.device), target.to(self.device)
                 self.optimizer.zero_grad()
-                output = self.model(data, dropout_rate=0.25)
+                output = self.model(data, dropout_rate=0.5)
                 loss = F.cross_entropy(output, target)
                 loss.backward()
                 self.optimizer.step()
 
-                if verbose:
-                    if batch_idx % log_interval == 0:
-                        print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                            epoch, batch_idx * len(data), len(loader.dataset),
-                                       100. * batch_idx / len(loader), loss.item()))
+                if verbose and (batch_idx+1) % log_interval == 0:
+                # if verbose and batch_idx == len(loader)-1:
+                    val_loss = self.evaluate(val_loader)
+                    percent = 100.*batch_idx/len(loader)
+                    print("Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}\tVal Loss: {:.6f}".format(
+                        epoch, batch_idx * len(data), len(loader.dataset), percent,
+                        loss.item(), val_loss))
+
+    def evaluate(self, val_loader):
+        losses = []
+        with torch.no_grad():
+            for data, target in val_loader:
+                data, target = data.to(self.device), target.to(self.device)
+                output = self.model(data, dropout_rate=0)
+                losses.append(F.cross_entropy(output, target).item())
+        return np.mean(losses)
+
 
     def predict(self, x):
         self.eval()
-        x = torch.FloatTensor(x).to(self.device)
+        x = torch.FloatTensor(x.copy()).to(self.device)
         with torch.no_grad():
             predictions = self.model(x).argmax(dim=1, keepdim=True)
+        x.cpu() # unload cuda
         return predictions.cpu().numpy()
 
     def _to_loader(self, x, y, shuffle=True):
