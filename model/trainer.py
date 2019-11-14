@@ -110,9 +110,9 @@ class EnsembleTrainer:
             for model in self.models]
         self.reduction = reduction
 
-    def fit(self, x, y, epochs=10, log_interval=10):
+    def fit(self, train_set, val_set, **kwargs):
         for trainer in self.trainers:
-            trainer.fit(x, y, epochs, log_interval)
+            trainer.fit(train_set, val_set, **kwargs)
 
     def predict(self, x):
         self.eval()
