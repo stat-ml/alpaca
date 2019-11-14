@@ -11,10 +11,9 @@ class Trainer:
         self.model.to(self.device)
 
         # self.optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-        self.optimizer = torch.optim.Adadelta(model.parameters())
+        self.optimizer = torch.optim.Adadelta(model.parameters(), weight_decay=1e-4)
         self.dropout_train = dropout_train
         self.batch_size = batch_size
-
 
     def fit(self, train_set, val_set, epochs=10, log_interval=50, verbose=False):
         self.model.train()
@@ -30,12 +29,11 @@ class Trainer:
                 loss.backward()
                 self.optimizer.step()
 
-                if verbose and (batch_idx+1) % log_interval == 0:
-                # if verbose and batch_idx == len(loader)-1:
+                if verbose and ((batch_idx+1) % log_interval == 0 or batch_idx == len(loader)-1):
                     val_loss = self.evaluate(val_loader)
                     percent = 100.*batch_idx/len(loader)
                     print("Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}\tVal Loss: {:.6f}".format(
-                        epoch, batch_idx * len(data), len(loader.dataset), percent,
+                        epoch, (batch_idx+1) * len(data), len(loader.dataset), percent,
                         loss.item(), val_loss))
 
     def evaluate(self, val_loader):
@@ -49,15 +47,22 @@ class Trainer:
 
 
     def predict(self, x):
-        self.eval()
-        x = torch.FloatTensor(x.copy()).to(self.device)
+        self.model.eval()
+        predictions = []
         with torch.no_grad():
-            predictions = self.model(x).argmax(dim=1, keepdim=True)
-        x.cpu() # unload cuda
-        return predictions.cpu().numpy()
+            loader = self._to_loader(x, shuffle=False)
+            for batch in loader:
+                batch = batch[0].to(self.device)
+                prediction = self.model(batch).argmax(dim=1, keepdim=True).cpu()
+                predictions.append(prediction)
+            predictions = torch.cat(predictions).numpy()
+        return predictions
 
-    def _to_loader(self, x, y, shuffle=True):
-        ds = TensorDataset(torch.FloatTensor(x), torch.LongTensor(y.reshape(-1)))
+    def _to_loader(self, x, y=None, shuffle=True):
+        if y is None:
+            ds = TensorDataset(torch.FloatTensor(x))
+        else:
+            ds = TensorDataset(torch.FloatTensor(x), torch.LongTensor(y.reshape(-1)))
         loader = DataLoader(ds, batch_size=self.batch_size, shuffle=shuffle)
         return loader
 
