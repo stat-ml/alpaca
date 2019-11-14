@@ -8,7 +8,7 @@ from scipy.special import softmax
 from dppy.finite_dpps import FiniteDPP
 
 
-DEFAULT_MASKS = ['vanilla', 'lhs', 'mirror_random', 'decorrelating', 'decorrelating_sc', 'dpp', 'rank_dpp']
+DEFAULT_MASKS = ['vanilla', 'decorrelating_sc', 'dpp', 'rank_dpp']
 BASIC_MASKS = ['vanilla', 'basic_mask', 'basic_bern', 'dpp', 'rank_dpp']
 
 
@@ -151,12 +151,12 @@ class DPPMask:
         mask = x.data.new(x.data.size()[-1]).fill_(0)
 
         # sampling nodes ids
-        k = int(len(mask) * (1 - dropout_rate))
         dpp = self.dpps[layer_num]
         dpp.sample_exact()
         ids = dpp.list_of_samples[-1]
-        if len(ids) > k:
-            ids = np.random.choice(ids, k)
+        # k = int(len(mask) * (1 - dropout_rate))
+        # if len(ids) > k:
+        #     ids = np.random.choice(ids, k)
 
         # scaling
         mask[ids] = len(mask)/len(ids)

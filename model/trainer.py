@@ -15,10 +15,12 @@ class Trainer:
         self.dropout_train = dropout_train
         self.batch_size = batch_size
 
-    def fit(self, train_set, val_set, epochs=10, log_interval=50, verbose=False):
+    def fit(self, train_set, val_set, epochs=10, log_interval=1000, verbose=False, patience=5):
         self.model.train()
         loader = self._to_loader(*train_set)
         val_loader = self._to_loader(*val_set)
+
+        self._set_patience(patience)
 
         for epoch in range(epochs):
             for batch_idx, (data, target) in enumerate(loader):
@@ -29,12 +31,34 @@ class Trainer:
                 loss.backward()
                 self.optimizer.step()
 
-                if verbose and ((batch_idx+1) % log_interval == 0 or batch_idx == len(loader)-1):
-                    val_loss = self.evaluate(val_loader)
-                    percent = 100.*batch_idx/len(loader)
-                    print("Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}\tVal Loss: {:.6f}".format(
-                        epoch, (batch_idx+1) * len(data), len(loader.dataset), percent,
-                        loss.item(), val_loss))
+                if verbose:
+                    self._report(epoch, loss, data, batch_idx, log_interval, loader, val_loader)
+
+            if not self._check_patience(val_loader):
+                break
+
+    def _set_patience(self, patience):
+        self.start_patience = patience
+        self.current_patience = self.start_patience
+        self.best_loss = float('inf')
+
+    def _check_patience(self, val_loader):
+        loss = self.evaluate(val_loader)
+        if loss < self.best_loss:
+            self.best_loss = loss
+            self.current_patience = self.start_patience
+        else:
+            self.current_patience -= 1
+
+        return self.current_patience > 0
+
+    def _report(self, epoch, loss, data, batch_idx, log_interval, loader, val_loader):
+        if (batch_idx + 1) % log_interval == 0 or batch_idx == len(loader) - 1:
+            val_loss = self.evaluate(val_loader)
+            percent = 100. * batch_idx / len(loader)
+            print("Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}\tVal Loss: {:.6f}".format(
+                epoch, (batch_idx + 1) * len(data), len(loader.dataset), percent,
+                loss.item(), val_loss))
 
     def evaluate(self, val_loader):
         losses = []
@@ -44,7 +68,6 @@ class Trainer:
                 output = self.model(data, dropout_rate=0)
                 losses.append(F.cross_entropy(output, target).item())
         return np.mean(losses)
-
 
     def predict(self, x):
         self.model.eval()
