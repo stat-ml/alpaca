@@ -55,9 +55,9 @@ class Trainer:
     def _report(self, epoch, loss, data, batch_idx, log_interval, loader, val_loader):
         if (batch_idx + 1) % log_interval == 0 or batch_idx == len(loader) - 1:
             val_loss = self.evaluate(val_loader)
-            percent = 100. * batch_idx / len(loader)
+            percent = batch_idx / len(loader)
             print("Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}\tVal Loss: {:.6f}".format(
-                epoch, (batch_idx + 1) * len(data), len(loader.dataset), percent,
+                epoch, int(percent*len(loader.dataset)), len(loader.dataset), 100 * percent,
                 loss.item(), val_loss))
 
     def evaluate(self, val_loader):
@@ -109,6 +109,7 @@ class EnsembleTrainer:
             Trainer(model, batch_size=batch_size, dropout_train=dropout_train)
             for model in self.models]
         self.reduction = reduction
+        self.device = 'cuda'
 
     def fit(self, train_set, val_set, **kwargs):
         for trainer in self.trainers:
@@ -117,7 +118,7 @@ class EnsembleTrainer:
     def predict(self, x):
         self.eval()
         with torch.no_grad():
-            predictions = self(x).argmax(dim=1, keepdim=True)
+            predictions = self(x).detach().argmax(dim=1, keepdim=True)
         return predictions.cpu().numpy()
 
     def __call__(self, x, reduction='default', **kwargs):
@@ -130,6 +131,10 @@ class EnsembleTrainer:
             res = res
         elif reduction == 'mean':
             res = res.mean(dim=0)
+
+        # Ensemble generated memory leakage smh
+        # NB: it's probably better use batches intead of empty cache
+        torch.cuda.empty_cache()
 
         return res
 
