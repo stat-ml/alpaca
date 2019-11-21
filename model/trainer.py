@@ -69,15 +69,17 @@ class Trainer:
                 losses.append(F.cross_entropy(output, target).item())
         return np.mean(losses)
 
-    def predict(self, x):
+    def predict(self, x, logits=False):
         self.model.eval()
         predictions = []
         with torch.no_grad():
             loader = self._to_loader(x, shuffle=False)
             for batch in loader:
                 batch = batch[0].to(self.device)
-                prediction = self.model(batch).argmax(dim=1, keepdim=True).cpu()
-                predictions.append(prediction)
+                prediction = self.model(batch)
+                if not logits:
+                    prediction = prediction.argmax(dim=1, keepdim=True)
+                predictions.append(prediction.cpu())
             predictions = torch.cat(predictions).numpy()
         return predictions
 
@@ -118,11 +120,12 @@ class EnsembleTrainer:
     def predict(self, x):
         self.eval()
         with torch.no_grad():
-            predictions = self(x).detach().argmax(dim=1, keepdim=True)
+            # predictions = self(x).detach().argmax(dim=1, keepdim=True)
+            predictions = self(x).argmax(axis=1)[..., np.newaxis]
         return predictions.cpu().numpy()
 
     def __call__(self, x, reduction='default', **kwargs):
-        res = torch.stack([trainer(x, **kwargs) for trainer in self.trainers])
+        res = torch.stack([torch.Tensor(trainer.predict(x, logits=True)) for trainer in self.trainers])
 
         if reduction == 'default':
             reduction = self.reduction
@@ -131,10 +134,6 @@ class EnsembleTrainer:
             res = res
         elif reduction == 'mean':
             res = res.mean(dim=0)
-
-        # Ensemble generated memory leakage smh
-        # NB: it's probably better use batches intead of empty cache
-        torch.cuda.empty_cache()
 
         return res
 
