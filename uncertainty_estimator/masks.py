@@ -201,3 +201,39 @@ class DPPRankMask:
 
     def reset(self):
         self.layer_correlations = {}
+
+
+class DPPKeepMask:
+    def __init__(self, dry_run=True):
+        self.layer_correlations = {}
+        self.dry_run = dry_run
+        self.dpps = {}
+
+    def __call__(self, x, dropout_rate=0.5, layer_num=0):
+        if layer_num not in self.layer_correlations:
+            # warm-up, generatign correlations masks
+            x_matrix = x.cpu().numpy()
+            correlations = np.corrcoef(x_matrix.T)
+            self.dpps[layer_num] = FiniteDPP('correlation', **{'K': correlations})
+            self.layer_correlations[layer_num] = correlations
+            return x.data.new(x.data.size()[-1]).fill_(1)
+
+        mask = x.data.new(x.data.size()[-1]).fill_(0)
+
+        # sampling nodes ids
+        dpp = self.dpps[layer_num]
+        dpp.sample_exact()
+        ids = dpp.list_of_samples[-1]
+        # k = int(len(mask) * (1 - dropout_rate))
+        # if len(ids) > k:
+        #     ids = np.random.choice(ids, k)
+
+        # scaling
+        mask[ids] = len(mask)/len(ids)
+
+        return x.data.new(mask)
+
+    def reset(self):
+        self.layer_correlations = {}
+
+
