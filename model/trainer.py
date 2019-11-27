@@ -26,6 +26,7 @@ class Trainer:
             for batch_idx, (data, target) in enumerate(loader):
                 data, target = data.to(self.device), target.to(self.device)
                 self.optimizer.zero_grad()
+                # import pdb; pdb.set_trace()
                 output = self.model(data, dropout_rate=0.5)
                 loss = F.cross_entropy(output, target)
                 loss.backward()
@@ -61,6 +62,12 @@ class Trainer:
                 loss.item(), val_loss))
 
     def evaluate(self, val_loader):
+        if not isinstance(val_loader, DataLoader):
+            if len(val_loader) == 1:
+                val_loader = self._to_loader(val_loader)
+            elif len(val_loader) == 2:
+                val_loader = self._to_loader(val_loader[0], val_loader[1])
+
         losses = []
         with torch.no_grad():
             for data, target in val_loader:

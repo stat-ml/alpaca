@@ -1,7 +1,6 @@
 from collections import defaultdict
 
 import torch
-from torch.autograd import Variable
 from pyDOE import lhs
 import numpy as np
 from scipy.special import softmax
@@ -63,7 +62,6 @@ class BasicMaskBernoulli:
     @staticmethod
     def _make_noise(input):
         return input.new().resize_as_(input)
-
 
 
 class LHSMask:
@@ -135,10 +133,13 @@ class DecorrelationMask:
 
 
 class DPPMask:
-    def __init__(self, dry_run=True):
+    def __init__(self):
         self.layer_correlations = {}
-        self.dry_run = dry_run
         self.dpps = {}
+        self.drop_mask = True
+
+        # Flag for uncertainty estimator to make first run without taking the result
+        self.dry_run = True
 
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         if layer_num not in self.layer_correlations:
@@ -149,18 +150,14 @@ class DPPMask:
             self.layer_correlations[layer_num] = correlations
             return x.data.new(x.data.size()[-1]).fill_(1)
 
-        mask = x.data.new(x.data.size()[-1]).fill_(0)
-
         # sampling nodes ids
         dpp = self.dpps[layer_num]
         dpp.sample_exact()
         ids = dpp.list_of_samples[-1]
-        # k = int(len(mask) * (1 - dropout_rate))
-        # if len(ids) > k:
-        #     ids = np.random.choice(ids, k)
 
-        # scaling
-        mask[ids] = len(mask)/len(ids)
+        mask_len = x.data.size()[-1]
+        mask = x.data.new(mask_len).fill_(0)
+        mask[ids] = mask_len/len(ids)
 
         return x.data.new(mask)
 
@@ -169,9 +166,9 @@ class DPPMask:
 
 
 class DPPRankMask:
-    def __init__(self, dry_run=True):
+    def __init__(self):
         self.layer_correlations = {}
-        self.dry_run = dry_run
+        self.dry_run = True
         self.dpps = {}
         self.ranks = {}
 
@@ -201,39 +198,3 @@ class DPPRankMask:
 
     def reset(self):
         self.layer_correlations = {}
-
-
-class DPPKeepMask:
-    def __init__(self, dry_run=True):
-        self.layer_correlations = {}
-        self.dry_run = dry_run
-        self.dpps = {}
-
-    def __call__(self, x, dropout_rate=0.5, layer_num=0):
-        if layer_num not in self.layer_correlations:
-            # warm-up, generatign correlations masks
-            x_matrix = x.cpu().numpy()
-            correlations = np.corrcoef(x_matrix.T)
-            self.dpps[layer_num] = FiniteDPP('correlation', **{'K': correlations})
-            self.layer_correlations[layer_num] = correlations
-            return x.data.new(x.data.size()[-1]).fill_(1)
-
-        mask = x.data.new(x.data.size()[-1]).fill_(0)
-
-        # sampling nodes ids
-        dpp = self.dpps[layer_num]
-        dpp.sample_exact()
-        ids = dpp.list_of_samples[-1]
-        # k = int(len(mask) * (1 - dropout_rate))
-        # if len(ids) > k:
-        #     ids = np.random.choice(ids, k)
-
-        # scaling
-        mask[ids] = len(mask)/len(ids)
-
-        return x.data.new(mask)
-
-    def reset(self):
-        self.layer_correlations = {}
-
-

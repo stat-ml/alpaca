@@ -33,7 +33,7 @@ class SimpleConv(nn.Module):
 
 
 class StrongConv(nn.Module):
-    def __init__(self):
+    def __init__(self, num_classes=10):
         super().__init__()
         self.conv11 = nn.Conv2d(3, 16, 3, padding=1)
         self.conv12 = nn.Conv2d(16, 16, 3, padding=1)
@@ -44,7 +44,7 @@ class StrongConv(nn.Module):
 
         self.linear_size = 8*8*32
         self.fc1 = nn.Linear(self.linear_size, 256)
-        self.fc2 = nn.Linear(256, 9)
+        self.fc2 = nn.Linear(256, num_classes)
 
     def forward(self, x, dropout_rate=0., dropout_mask=None):
         x = F.elu(self.conv11(x))
@@ -73,14 +73,14 @@ class StrongConv(nn.Module):
 
 
 class MediumConv(nn.Module):
-    def __init__(self):
+    def __init__(self, num_classes=10):
         super().__init__()
         self.conv1 = nn.Conv2d(3, 16, 3)
         self.conv2 = nn.Conv2d(16, 32, 3)
         self.linear_size = 14*14*32
         self.fc1 = nn.Linear(self.linear_size, 256)
         self.dropout = nn.Dropout(0.5)
-        self.fc2 = nn.Linear(256, 9)
+        self.fc2 = nn.Linear(256, num_classes)
 
     def forward(self, x, dropout_rate=0., dropout_mask=None):
         x = F.elu(self.conv1(x))
