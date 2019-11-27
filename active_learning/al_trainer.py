@@ -39,11 +39,13 @@ class ALTrainer:
             print("Iteration", al_iteration+1)
             # retrain net
             self.model.fit((x_train, y_train), (x_val, y_val), verbose=self.verbose, patience=self.patience)
-            rmse = self.model.evaluate((x_val, y_val))
-            print('Validation RMSE after training: %.3f' % rmse)
-            errors.append(rmse)
+            error = self.model.evaluate((x_val, y_val))
+            print('Validation error after training: %.3f' % error)
+            errors.append(error)
 
             # update pool
+            if hasattr(self.estimator, 'reset'):
+                self.estimator.reset()
             uncertainties = self.estimator.estimate(x_pool, x_train)
             x_train, y_train, x_pool = self.sampler.update_sets(
                 x_train, y_train, x_pool, uncertainties, self.update_size, self.oracle

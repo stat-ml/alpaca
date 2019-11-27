@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class SimpleConv(nn.Module):
-    def __init__(self):
+    def __init__(self, num_classes=10):
         super().__init__()
         self.conv1 = nn.Conv2d(1, 16, 3)
         self.conv2 = nn.Conv2d(16, 32, 3)

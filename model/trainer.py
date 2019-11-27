@@ -131,6 +131,9 @@ class EnsembleTrainer:
             predictions = self(x).argmax(axis=1)[..., np.newaxis]
         return predictions.cpu().numpy()
 
+    def evaluate(self, val_loader):
+        return np.mean([trainer.evaluate(val_loader) for trainer in self.trainers])
+
     def __call__(self, x, reduction='default', **kwargs):
         res = torch.stack([torch.Tensor(trainer.predict(x, logits=True)) for trainer in self.trainers])
 
