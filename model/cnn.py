@@ -44,8 +44,8 @@ class StrongConv(nn.Module):
         self.conv22 = nn.Conv2d(32, 32, 3, padding=1)
 
         self.linear_size = 8*8*32
-        self.fc1 = nn.Linear(self.linear_size, 512)
-        self.fc2 = nn.Linear(512, 9)
+        self.fc1 = nn.Linear(self.linear_size, 256)
+        self.fc2 = nn.Linear(256, 9)
 
     def forward(self, x, dropout_rate=0., dropout_mask=None):
         x = F.elu(self.conv11(x))
