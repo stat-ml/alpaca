@@ -5,13 +5,13 @@ from torch.utils.data import TensorDataset, DataLoader
 
 
 class Trainer:
-    def __init__(self, model, batch_size=128, lr=1e-3, dropout_train=0.5):
+    def __init__(self, model, batch_size=128, lr=1e-3, dropout_train=0.5, weight_decay=1e-4):
         self.model = model
         self.device = 'cuda'
         self.model.to(self.device)
 
         # self.optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-        self.optimizer = torch.optim.Adadelta(model.parameters(), weight_decay=1e-4)
+        self.optimizer = torch.optim.Adadelta(model.parameters(), weight_decay=weight_decay)
         self.dropout_train = dropout_train
         self.batch_size = batch_size
 

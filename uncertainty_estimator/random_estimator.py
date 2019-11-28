@@ -3,4 +3,4 @@ import numpy as np
 
 class RandomEstimator:
     def estimate(self, X_pool, *args):
-        return np.zeros(X_pool.shape[0])
+        return np.ones(X_pool.shape[0])
