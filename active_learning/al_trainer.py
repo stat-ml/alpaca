@@ -39,7 +39,8 @@ class ALTrainer:
             print("Iteration", al_iteration+1)
             # retrain net
             self.model.fit((x_train, y_train), (x_val, y_val), verbose=self.verbose, patience=self.patience)
-            error = self.model.evaluate((x_val, y_val))
+            # error = self.model.evaluate((x_val, y_val))
+            error = self.model.evaluate((x_pool, self.oracle.y_set))
             print('Validation error after training: %.3f' % error)
             errors.append(error)
 
