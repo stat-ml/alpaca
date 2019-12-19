@@ -68,6 +68,7 @@ class AutoEncoder(nn.Module):
         return test_loss
 
 
+
 class VAE(nn.Module):
     def __init__(self, input_size, hidden_size, embedding_size):
         super(VAE, self).__init__()
@@ -127,7 +128,6 @@ class VAE(nn.Module):
             train_loss += loss.item()
             self.optimizer.step()
 
-
     def evaluate(self, x_val):
         self.eval()
         test_loss = 0
@@ -141,14 +141,8 @@ class VAE(nn.Module):
         test_loss /= len(test_loader.dataset)
         return test_loss
 
-
-
     def predict(self, x_batch):
         with torch.no_grad():
             result = self(torch.from_numpy(x_batch).to(self.device))
         return result[0].tolist()
-
-
-
-
 

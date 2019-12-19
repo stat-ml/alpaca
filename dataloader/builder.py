@@ -8,6 +8,7 @@ from .protein_structure import ProteinStructureData
 from .red_wine import RedWineData
 from .yacht_hydrodynamics import YachtHydrodynamicsData
 from .year_prediction_msd import YearPredictionMSDData
+from .openml import MnistData, FashionMnistData, Cifar10
 
 
 DATASETS = {
@@ -20,7 +21,10 @@ DATASETS = {
     'protein_structure': ProteinStructureData,
     'red_wine': RedWineData,
     'yacht_hydrodynamics': YachtHydrodynamicsData,
-    'year_prediction_msd': YearPredictionMSDData
+    'year_prediction_msd': YearPredictionMSDData,
+    'mnist': MnistData,
+    'fashion_mnist': FashionMnistData,
+    'cifar_10': Cifar10
 }
 
 

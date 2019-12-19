@@ -3,6 +3,7 @@ from collections import OrderedDict
 from itertools import count
 import torch
 
+
 class MLPEnsemble:
     def __init__(self, layers, n_models, reduction='mean', **kwargs):
         
@@ -37,8 +38,10 @@ class MLPEnsemble:
             res = torch.stack([m(x, dropout_mask = dpm, **kwargs) for m, dpm in zip(self.models, masks)])
         else:
             res = torch.stack([m(x, **kwargs) for m in self.models])
+
         if reduction == 'default':
             reduction = self.reduction
+
         if reduction is None:
             res = res
         elif reduction == 'mean':
