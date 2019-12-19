@@ -171,6 +171,7 @@ class DPPRankMask:
         self.dry_run = True
         self.dpps = {}
         self.ranks = {}
+        self.ranks_history = defaultdict(list)
 
     def _rank(self, dpp):
         N = dpp.eig_vecs.shape[0]
@@ -185,6 +186,7 @@ class DPPRankMask:
             self.dpps[layer_num] = FiniteDPP('correlation', **{'K': self.layer_correlations[layer_num]})
             self.dpps[layer_num].sample_exact_k_dpp(1)  # to trigger eig values generation
             self.ranks[layer_num] = self._rank(self.dpps[layer_num])
+            self.ranks_history[layer_num].append(self.ranks[layer_num])
             return x.data.new(x.data.size()[-1]).fill_(1)
 
         mask = x.data.new(x.data.size()[-1]).fill_(0)

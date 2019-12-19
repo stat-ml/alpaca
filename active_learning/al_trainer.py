@@ -11,7 +11,7 @@ class ALTrainer:
     """
     def __init__(
             self, model, estimator, oracle=None, sampler=None, y_pool=None, iterations=10,
-            update_size=100, verbose=True, patience=10):
+            update_size=100, verbose=True, patience=10, val_on_pool=False):
         self.model = model
         self.estimator = estimator
         self.sampler = sampler
@@ -20,6 +20,7 @@ class ALTrainer:
         self.update_size = update_size
         self.verbose = verbose
         self.patience = patience
+        self.val_on_pool = val_on_pool
 
         if sampler is None:
             sampler = EagerSampleSelector()
@@ -39,8 +40,11 @@ class ALTrainer:
             print("Iteration", al_iteration+1)
             # retrain net
             self.model.fit((x_train, y_train), (x_val, y_val), verbose=self.verbose, patience=self.patience)
-            # error = self.model.evaluate((x_val, y_val))
-            error = self.model.evaluate((x_pool, self.oracle.y_set))
+            if self.val_on_pool:
+                error = self.model.evaluate((x_pool, self.oracle.y_set))
+            else:
+                error = self.model.evaluate((x_val, y_val))
+
             print('Validation error after training: %.3f' % error)
             errors.append(error)
 
