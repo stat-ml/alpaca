@@ -23,7 +23,8 @@ def build_masks(names=None, nn_runs=100):
         'decorrelating': DecorrelationMask(),
         'decorrelating_sc': DecorrelationMask(scaling=True, dry_run=False),
         'dpp': DPPMask(),
-        'rank_dpp': DPPRankMask()
+        'rank_dpp': DPPRankMask(),
+        'noise_dpp': DPPMask(noise=True)
     }
     if names is None:
         return masks
@@ -133,10 +134,11 @@ class DecorrelationMask:
 
 
 class DPPMask:
-    def __init__(self):
+    def __init__(self, noise=False):
         self.layer_correlations = {}
         self.dpps = {}
         self.drop_mask = True
+        self.noise = noise
 
         # Flag for uncertainty estimator to make first run without taking the result
         self.dry_run = True
@@ -146,6 +148,9 @@ class DPPMask:
             # warm-up, generatign correlations masks
             x_matrix = x.cpu().numpy()
             correlations = np.corrcoef(x_matrix.T)
+            if self.noise:  # Add noise on diagonal to increase rank
+                noise_level = dropout_rate
+                correlations = correlations + np.diag(np.random.randn(len(correlations))*noise_level)
             self.dpps[layer_num] = FiniteDPP('correlation', **{'K': correlations})
             self.layer_correlations[layer_num] = correlations
             return x.data.new(x.data.size()[-1]).fill_(1)
