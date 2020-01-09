@@ -20,7 +20,10 @@ class Trainer:
         self.loss = loss or F.cross_entropy
         self.regression = regression
 
-    def fit(self, train_set, val_set, epochs=10, log_interval=1000, verbose=False, patience=5):
+    def fit(self, train_set, val_set, epochs=10, log_interval=1000, verbose=False, patience=5, dropout_rate=None):
+        if dropout_rate is None:
+            dropout_rate = self.dropout_train
+
         self.model.train()
         loader = self._to_loader(*train_set)
         val_loader = self._to_loader(*val_set)
@@ -31,7 +34,7 @@ class Trainer:
             for batch_idx, (data, target) in enumerate(loader):
                 data, target = data.to(self.device), target.to(self.device)
                 self.optimizer.zero_grad()
-                output = self.model(data, dropout_rate=0.5)
+                output = self.model(data, dropout_rate=dropout_rate)
                 loss = self.loss(output, target)
                 loss.backward()
                 self.optimizer.step()
@@ -114,6 +117,7 @@ class Trainer:
 
     def eval(self):
         self.model.eval()
+
 
 
 class EnsembleTrainer:

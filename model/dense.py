@@ -18,19 +18,19 @@ class Dense(nn.Module):
             self.fcs.append(fc)
         self.postprocessing = postprocessing
 
-        self.double()
+        # self.double()
         self.to(self.device)
 
     def forward(self, x, dropout_rate=0, dropout_mask=None):
-        # out = torch.DoubleTensor(x).to(self.device) if isinstance(x, np.ndarray) else x
+        # out = torch.FloatTensor(x).to(self.device) if isinstance(x, np.ndarray) else x
         out = x
         out = F.leaky_relu(self.fcs[0](out))
 
         for layer_num, fc in enumerate(self.fcs[1:-1]):
             out = F.leaky_relu(fc(out))
-            # if dropout_mask is None:
-            # out = nn.Dropout(dropout_rate)(out)
-            # else:
-            #     out = out*dropout_mask(out, dropout_rate, layer_num)
+            if dropout_mask is None:
+                out = nn.Dropout(dropout_rate)(out)
+            else:
+                out = out*dropout_mask(out, dropout_rate, layer_num)
         out = self.fcs[-1](out)
         return out
