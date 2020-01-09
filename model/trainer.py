@@ -5,7 +5,9 @@ from torch.utils.data import TensorDataset, DataLoader
 
 
 class Trainer:
-    def __init__(self, model, batch_size=128, lr=1e-3, dropout_train=0.5, weight_decay=1e-4):
+    def __init__(
+            self, model, batch_size=128, lr=1e-3, dropout_train=0.5, weight_decay=1e-4,
+            loss=None, regression=False):
         self.model = model
         self.device = 'cuda'
         self.model.to(self.device)
@@ -14,6 +16,9 @@ class Trainer:
         self.optimizer = torch.optim.Adadelta(model.parameters(), weight_decay=weight_decay)
         self.dropout_train = dropout_train
         self.batch_size = batch_size
+
+        self.loss = loss or F.cross_entropy
+        self.regression = regression
 
     def fit(self, train_set, val_set, epochs=10, log_interval=1000, verbose=False, patience=5):
         self.model.train()
@@ -26,9 +31,8 @@ class Trainer:
             for batch_idx, (data, target) in enumerate(loader):
                 data, target = data.to(self.device), target.to(self.device)
                 self.optimizer.zero_grad()
-                # import pdb; pdb.set_trace()
                 output = self.model(data, dropout_rate=0.5)
-                loss = F.cross_entropy(output, target)
+                loss = self.loss(output, target)
                 loss.backward()
                 self.optimizer.step()
 
@@ -73,7 +77,7 @@ class Trainer:
             for data, target in val_loader:
                 data, target = data.to(self.device), target.to(self.device)
                 output = self.model(data, dropout_rate=0)
-                losses.append(F.cross_entropy(output, target).item())
+                losses.append(self.loss(output, target).item())
         return np.mean(losses)
 
     def predict(self, x, logits=False):
@@ -94,7 +98,10 @@ class Trainer:
         if y is None:
             ds = TensorDataset(torch.FloatTensor(x))
         else:
-            ds = TensorDataset(torch.FloatTensor(x), torch.LongTensor(y.reshape(-1)))
+            if self.regression:
+                ds = TensorDataset(torch.FloatTensor(x), torch.FloatTensor(y))
+            else:
+                ds = TensorDataset(torch.FloatTensor(x), torch.LongTensor(y.reshape(-1)))
         loader = DataLoader(ds, batch_size=self.batch_size, shuffle=shuffle)
         return loader
 
