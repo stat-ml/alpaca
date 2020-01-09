@@ -29,7 +29,7 @@ class Dense(nn.Module):
         for layer_num, fc in enumerate(self.fcs[1:-1]):
             out = F.leaky_relu(fc(out))
             # if dropout_mask is None:
-            out = nn.Dropout(dropout_rate)(out)
+            # out = nn.Dropout(dropout_rate)(out)
             # else:
             #     out = out*dropout_mask(out, dropout_rate, layer_num)
         out = self.fcs[-1](out)

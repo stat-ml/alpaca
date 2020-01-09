@@ -88,7 +88,7 @@ class Trainer:
             for batch in loader:
                 batch = batch[0].to(self.device)
                 prediction = self.model(batch)
-                if not logits:
+                if not logits and not self.regression:
                     prediction = prediction.argmax(dim=1, keepdim=True)
                 predictions.append(prediction.cpu())
             predictions = torch.cat(predictions).numpy()
