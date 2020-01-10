@@ -187,7 +187,14 @@ class DPPRankMask:
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         if layer_num not in self.layer_correlations:
             x_matrix = x.cpu().numpy()
-            self.layer_correlations[layer_num] = np.abs(np.corrcoef(x_matrix.T))
+            correlations = np.abs(np.corrcoef(x_matrix.T))
+
+            # ### TODO clean up
+            # noise_level = dropout_rate
+            # correlations = correlations + np.diag(np.random.randn(len(correlations)) * noise_level)
+            # ### end noise clean up
+
+            self.layer_correlations[layer_num] = correlations
             self.dpps[layer_num] = FiniteDPP('correlation', **{'K': self.layer_correlations[layer_num]})
             self.dpps[layer_num].sample_exact_k_dpp(1)  # to trigger eig values generation
             self.ranks[layer_num] = self._rank(self.dpps[layer_num])
