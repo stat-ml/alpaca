@@ -119,7 +119,6 @@ class Trainer:
         self.model.eval()
 
 
-
 class EnsembleTrainer:
     def __init__(
             self, model_class, model_kwargs, n_models, batch_size=128,
