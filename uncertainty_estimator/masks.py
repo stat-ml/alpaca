@@ -8,10 +8,9 @@ from scipy.special import softmax
 from dppy.finite_dpps import FiniteDPP
 
 
-# DEFAULT_MASKS = ['vanilla', 'decorrelating_sc', 'dpp', 'rank_dpp']
 DEFAULT_MASKS = [
-    'basic_bern', 'decorrelating_sc', 'dpp', 'rank_dpp', 'noise_dpp',
-    'l_dpp', 'noise_l_dpp', 'l_dpp_knorm', 'dpp_knorm']
+    'basic_bern', 'decorrelating_sc', 'dpp', 'rank_dpp', 'dpp_noisereg',
+    'l_dpp', 'l_dpp_noisereg', 'l_dpp_knorm', 'dpp_knorm']
 BASIC_MASKS = ['vanilla', 'basic_mask', 'basic_bern', 'dpp', 'rank_dpp']
 
 
@@ -27,9 +26,9 @@ def build_masks(names=None, nn_runs=100):
         'decorrelating_sc': DecorrelationMask(scaling=True, dry_run=False),
         'dpp': DPPMask(),
         'rank_dpp': DPPRankMask(),
-        'noise_dpp': DPPMask(noise=True),
+        'dpp_noisereg': DPPMask(noise=True),
         'l_dpp': DPPMask(likelihood=True),
-        'noise_l_dpp': DPPMask(noise=True, likelihood=True),
+        'l_dpp_noisereg': DPPMask(noise=True, likelihood=True),
         'l_dpp_knorm': DPPMask(likelihood=True, k_norm=True),
         'dpp_knorm': DPPMask(k_norm=True)
     }
@@ -172,11 +171,14 @@ class DPPMask:
             self.layer_correlations[layer_num] = correlations
 
             if self.k_norm:
+                K = x.data.new(correlations)
+
+                # K = torch.DoubleTensor(correlations).to('cuda')
                 if self.likelihood:
-                    K = np.dot(correlations, la.inv(correlations + np.eye(len(correlations))))
-                else:
-                    K = correlations
-                self.norm[layer_num] = np.reciprocal(np.diag(K))
+                    L = K
+                    K = torch.mm(L, torch.inverse(L + torch.eye(len(L)).to('cuda')))
+
+                self.norm[layer_num] = torch.reciprocal(torch.diag(K))
 
             return x.data.new(x.data.size()[-1]).fill_(1)
 
