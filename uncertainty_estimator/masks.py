@@ -10,7 +10,7 @@ from dppy.finite_dpps import FiniteDPP
 
 DEFAULT_MASKS = [
     'basic_bern', 'decorrelating_sc', 'dpp', 'rank_dpp', 'dpp_noisereg',
-    'l_dpp', 'l_dpp_noisereg', 'l_dpp_knorm', 'dpp_knorm']
+    'l_dpp', 'l_dpp_noisereg', 'l_dpp_knorm']
 BASIC_MASKS = ['vanilla', 'basic_mask', 'basic_bern', 'dpp', 'rank_dpp']
 
 
@@ -172,11 +172,10 @@ class DPPMask:
 
             if self.k_norm:
                 K = x.data.new(correlations)
-
-                # K = torch.DoubleTensor(correlations).to('cuda')
                 if self.likelihood:
+                    E = x.data.new(np.eye(len(correlations)))
                     L = K
-                    K = torch.mm(L, torch.inverse(L + torch.eye(len(L)).to('cuda')))
+                    K = torch.mm(L, torch.inverse(L + E))
 
                 self.norm[layer_num] = torch.reciprocal(torch.diag(K))
 

@@ -33,8 +33,12 @@ class SimpleConv(nn.Module):
 
 
 class StrongConv(nn.Module):
-    def __init__(self, num_classes=10):
+    def __init__(self, num_classes=10, activation=None):
         super().__init__()
+        if activation is None:
+            self.activation = F.leaky_relu
+        else:
+            self.activation = activation
         self.conv11 = nn.Conv2d(3, 16, 3, padding=1)
         self.conv12 = nn.Conv2d(16, 16, 3, padding=1)
         self.dropout = nn.Dropout(0.25)

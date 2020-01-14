@@ -5,10 +5,14 @@ import numpy as np
 
 
 class Dense(nn.Module):
-    def __init__(self, layer_sizes, postprocessing=lambda x: x):
+    def __init__(self, layer_sizes, postprocessing=lambda x: x, activation=None):
         super().__init__()
 
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        if activation is None:
+            self.activation = F.leaky_relu
+        else:
+            self.activation = activation
 
         self.layer_sizes = layer_sizes
         self.fcs = []
@@ -24,10 +28,10 @@ class Dense(nn.Module):
     def forward(self, x, dropout_rate=0, dropout_mask=None):
         # out = torch.FloatTensor(x).to(self.device) if isinstance(x, np.ndarray) else x
         out = x
-        out = F.leaky_relu(self.fcs[0](out))
+        out = self.activation(self.fcs[0](out))
 
         for layer_num, fc in enumerate(self.fcs[1:-1]):
-            out = F.leaky_relu(fc(out))
+            out = self.activation(fc(out))
             if dropout_mask is None:
                 out = nn.Dropout(dropout_rate)(out)
             else:
