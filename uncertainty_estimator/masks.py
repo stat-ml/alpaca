@@ -181,7 +181,7 @@ class DPPMask:
                     L = K
                     K = torch.mm(L, torch.inverse(L + E))
 
-                self.norm[layer_num] = torch.reciprocal(torch.diag(K))
+                self.norm[layer_num] = torch.reciprocal(torch.diag(K))  # / len(correlations)
 
             return x.data.new(x.data.size()[-1]).fill_(1)
 
