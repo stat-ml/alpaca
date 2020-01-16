@@ -9,9 +9,11 @@ from dppy.finite_dpps import FiniteDPP
 
 
 DEFAULT_MASKS = [
-    'basic_bern', 'decorrelating_sc', 'dpp', 'rank_dpp', 'dpp_noisereg',
-    'l_dpp', 'l_dpp_noisereg', 'l_dpp_knorm']
+    'basic_bern', 'decorrelating_sc', 'l_dpp', 'rank_l_dpp', 'l_dpp_htnorm', 'l_dpp_noisereg']
 BASIC_MASKS = ['vanilla', 'basic_mask', 'basic_bern', 'dpp', 'rank_dpp']
+DPP_MASKS = [
+    'basic_bern', 'dpp', 'rank_dpp', 'dpp_noisereg',
+    'l_dpp', 'rank_l_dpp', 'l_dpp_noisereg', 'l_dpp_htnorm', 'l_dpp_htnorm_noisereg']
 
 
 def build_masks(names=None, nn_runs=100):
@@ -26,11 +28,13 @@ def build_masks(names=None, nn_runs=100):
         'decorrelating_sc': DecorrelationMask(scaling=True, dry_run=False),
         'dpp': DPPMask(),
         'rank_dpp': DPPRankMask(),
+        'rank_l_dpp': DPPRankMask(likelihood=True),
         'dpp_noisereg': DPPMask(noise=True),
         'l_dpp': DPPMask(likelihood=True),
         'l_dpp_noisereg': DPPMask(noise=True, likelihood=True),
-        'l_dpp_knorm': DPPMask(likelihood=True, k_norm=True),
-        'dpp_knorm': DPPMask(k_norm=True)
+        'l_dpp_htnorm': DPPMask(likelihood=True, ht_norm=True),
+        'l_dpp_htnorm_noisereg': DPPMask(noise=True, likelihood=True, ht_norm=True),
+        'dpp_htnorm': DPPMask(ht_norm=True)
     }
     if names is None:
         return masks
@@ -140,7 +144,7 @@ class DecorrelationMask:
 
 
 class DPPMask:
-    def __init__(self, noise=False, likelihood=False, k_norm=False):
+    def __init__(self, noise=False, likelihood=False, ht_norm=False):
         self.layer_correlations = {}
         self.dpps = {}
         self.norm = {}
@@ -148,7 +152,7 @@ class DPPMask:
 
         self.noise = noise
         self.likelihood = likelihood
-        self.k_norm = k_norm
+        self.ht_norm = ht_norm
 
         # Flag for uncertainty estimator to make first run without taking the result
         self.dry_run = True
@@ -170,7 +174,7 @@ class DPPMask:
 
             self.layer_correlations[layer_num] = correlations
 
-            if self.k_norm:
+            if self.ht_norm:
                 K = x.data.new(correlations)
                 if self.likelihood:
                     E = x.data.new(np.eye(len(correlations)))
@@ -188,7 +192,7 @@ class DPPMask:
 
         mask_len = x.data.size()[-1]
         mask = x.data.new(mask_len).fill_(0)
-        if self.k_norm:
+        if self.ht_norm:
             mask[ids] = self.norm[layer_num][ids]
         else:
             mask[ids] = mask_len/len(ids)
@@ -200,10 +204,11 @@ class DPPMask:
 
 
 class DPPRankMask:
-    def __init__(self):
+    def __init__(self, likelihood=False):
         self.layer_correlations = {}
         self.dry_run = True
         self.dpps = {}
+        self.likelihood = likelihood
         self.ranks = {}
         self.ranks_history = defaultdict(list)
 
@@ -219,7 +224,10 @@ class DPPRankMask:
             correlations = np.abs(np.corrcoef(x_matrix.T))
 
             self.layer_correlations[layer_num] = correlations
-            self.dpps[layer_num] = FiniteDPP('correlation', **{'K': self.layer_correlations[layer_num]})
+            if self.likelihood:
+                self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': correlations})
+            else:
+                self.dpps[layer_num] = FiniteDPP('correlation', **{'K': correlations})
             self.dpps[layer_num].sample_exact_k_dpp(1)  # to trigger eig values generation
             self.ranks[layer_num] = self._rank(self.dpps[layer_num])
             self.ranks_history[layer_num].append(self.ranks[layer_num])
