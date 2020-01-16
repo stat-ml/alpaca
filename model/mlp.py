@@ -96,15 +96,18 @@ class BaseMLP(nn.Module):
 
 
 class MLP(BaseMLP):
-    def __init__(self, layer_sizes, l2_reg=1e-5,
-                 postprocessing=lambda x: x, loss=nn.MSELoss, 
-                 optimizer={'type': 'Adadelta', 'weight_decay':1e-5}):
+    def __init__(self, layer_sizes, l2_reg=1e-5, postprocessing=None, loss=nn.MSELoss,
+                 optimizer=None):
+        if postprocessing is None:
+            postprocessing = lambda x: x
+
         super(MLP, self).__init__(layer_sizes, postprocessing)
-        #l2_reg is USELESS. In future we have to remove it
         self.criterion = loss()
+
+        if optimizer is None:
+            optimizer = {'type': 'Adadelta'}
         self.optimizer = self.init_optimizer(optimizer)
 
-        
     def init_optimizer(self, optimizer):
         if isinstance(optimizer, dict):
             kwargs = optimizer.copy()
@@ -116,5 +119,4 @@ class MLP(BaseMLP):
                 'optimizer must be either an Optimizer object or a dict, '
                 'but got {}'.format(type(optimizer)))
         return optimizer
-        
-        
+
