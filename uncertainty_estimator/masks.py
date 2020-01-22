@@ -156,7 +156,6 @@ class DPPMask:
 
         # Flag for uncertainty estimator to make first run without taking the result
         self.dry_run = True
-        self.layer_runs = defaultdict(list)
 
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         if layer_num not in self.layer_correlations:
@@ -185,8 +184,6 @@ class DPPMask:
                 self.norm[layer_num] = torch.reciprocal(torch.diag(K))  # / len(correlations)
 
             return x.data.new(x.data.size()[-1]).fill_(1)
-
-        self.layer_runs[layer_num].append(x.detach().cpu().numpy())
 
         # sampling nodes ids
         dpp = self.dpps[layer_num]
