@@ -162,6 +162,9 @@ class DPPMask:
         if layer_num not in self.layer_correlations:
             # warm-up, generatign correlations masks
             x_matrix = x.cpu().numpy()
+
+            self.x_matrix = x_matrix
+
             correlations = np.corrcoef(x_matrix.T)
 
             if self.noise:  # Add noise on diagonal to increase rank
