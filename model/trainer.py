@@ -20,6 +20,9 @@ class Trainer:
         self.loss = loss or F.cross_entropy
         self.regression = regression
 
+        self.val_loss_history = []
+        self.train_loss_history = []
+
     def fit(self, train_set, val_set, epochs=10, log_interval=1000, verbose=False, patience=5, dropout_rate=None):
         if dropout_rate is None:
             dropout_rate = self.dropout_train
@@ -67,6 +70,9 @@ class Trainer:
             print("Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}\tVal Loss: {:.6f}".format(
                 epoch, int(percent*len(loader.dataset)), len(loader.dataset), 100 * percent,
                 loss.item(), val_loss))
+
+            self.val_loss_history.append(val_loss)
+            self.train_loss_history.append(loss)
 
     def evaluate(self, val_loader):
         if not isinstance(val_loader, DataLoader):

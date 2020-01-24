@@ -40,7 +40,7 @@ class StrongConv(nn.Module):
     def __init__(self, num_classes=10, activation=None):
         super().__init__()
         if activation is None:
-            self.activation = F.leaky_rcelu
+            self.activation = F.leaky_rrelu
         else:
             self.activation = activation
         self.conv11 = nn.Conv2d(3, 16, 3, padding=1)
@@ -55,19 +55,19 @@ class StrongConv(nn.Module):
         self.fc2 = nn.Linear(256, num_classes)
 
     def forward(self, x, dropout_rate=0., dropout_mask=None):
-        x = F.celu(self.conv11(x))
-        x = F.celu(self.conv12(x))
+        x = F.relu(self.conv11(x))
+        x = F.relu(self.conv12(x))
         x = F.max_pool2d(x, 2, 2)
         if dropout_mask is None:
             x = self.dropout(x)
 
-        x = F.celu(self.conv21(x))
-        x = F.celu(self.conv22(x))
+        x = F.relu(self.conv21(x))
+        x = F.relu(self.conv22(x))
         x = F.max_pool2d(x, 2, 2)
         if dropout_mask is None:
             x = self.dropout(x)
         x = x.view(-1, self.linear_size)
-        x = F.celu(self.fc1(x))
+        x = F.relu(self.fc1(x))
         x = self._dropout(x, dropout_mask, dropout_rate, 1)
         x = self.fc2(x)
         return x
