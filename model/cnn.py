@@ -40,7 +40,7 @@ class StrongConv(nn.Module):
     def __init__(self, num_classes=10, activation=None):
         super().__init__()
         if activation is None:
-            self.activation = F.leaky_rrelu
+            self.activation = F.leaky_relu
         else:
             self.activation = activation
         self.conv11 = nn.Conv2d(3, 16, 3, padding=1)
