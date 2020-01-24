@@ -38,6 +38,7 @@ class ALTrainer:
 
         for al_iteration in range(self.iterations):
             print("Iteration", al_iteration+1)
+            print(x_pool.shape)
             # retrain net
             self.model.fit((x_train, y_train), (x_val, y_val), verbose=self.verbose, patience=self.patience)
             if self.val_on_pool:
