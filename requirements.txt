@@ -4,3 +4,4 @@ xlrd>=1.2.0
 requests>=2.22.0
 pydoe>=0.3.8
 dppy>=0.2.0
+fastai
