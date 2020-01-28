@@ -79,7 +79,6 @@ else:
 images = torch.FloatTensor(x_val[:50]).to('cuda')
 estimator = Bald(model, num_classes=10)
 estimations = estimator.estimate(images)
-
 idxs = np.argsort(estimations)[::-1]
 print(idxs)
 print(estimations[idxs])
