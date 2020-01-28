@@ -1,15 +1,16 @@
 import sys
 sys.path.append('..')
-import torch
+from functools import partial
 
-from torch.utils.data import TensorDataset, Dataset
+import torch
+from torch.utils.data import Dataset
 
 from fastai.vision import (
-    untar_data, rand_pad, flip_lr, ImageDataBunch, Learner, accuracy,
-    cifar_stats, URLs, simple_cnn, Image, ImageList, cnn_learner)
+    rand_pad, flip_lr, ImageDataBunch, Learner, accuracy,
+    simple_cnn, Image, cnn_learner)
 from fastai.vision.models.wrn import wrn_22
-from fastai.basic_data import DataBunch
 from fastai.vision import models
+from fastai.callbacks import EarlyStoppingCallback
 
 from model.model_alternative import AnotherConv
 from dataloader.builder import build_dataset
@@ -24,7 +25,7 @@ torch.cuda.set_device(1)
 torch.backends.cudnn.benchmark = True
 
 
-class ImageArrayDS:
+class ImageArrayDS(Dataset):
     def __init__(self, images, labels, tfms=None):
         self.images = torch.FloatTensor(images)
         self.labels = torch.LongTensor(labels)
@@ -58,7 +59,12 @@ data = ImageDataBunch.create(train_ds, val_ds, bs=512)
 model = AnotherConv()
 # model = simple_cnn((3, 16, 16, 10))
 
+callbacks = [
+    partial(EarlyStoppingCallback, monitor='valid_loss', min_delta=0.001, patience=3)]
 loss_func = torch.nn.CrossEntropyLoss()
-learn = Learner(data, model, metrics=accuracy, loss_func=loss_func).to_fp16()
-learn.fit_one_cycle(40, 3e-3, wd=0.4, div_factor=10, pct_start=0.5)
+learner = Learner(data, model, metrics=accuracy, loss_func=loss_func, callback_fns=callbacks).to_fp16()
+learner.fit_one_cycle(100, 3e-3, wd=0.4, div_factor=10, pct_start=0.5)
+
+learner.recorder.plot_losses(); plt.show()
+
 
