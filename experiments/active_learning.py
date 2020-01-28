@@ -1,6 +1,7 @@
 import sys
 sys.path.append('..')
 from functools import partial
+from collections import defaultdict
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,10 +28,10 @@ torch.backends.cudnn.benchmark = True
 
 
 val_size = 10_000
-pool_size = 20_000
+pool_size = 20_00
 start_size = 5_000
 step_size = 500
-steps = 20
+steps = 3
 
 
 class ImageArrayDS(Dataset):
@@ -60,33 +61,39 @@ def main():
     x_val = ((x_val - 128)/128).reshape(shape)
 
     # Start data split
-    x_pool, x_train, y_pool, y_train = train_test_split(x_set, y_set, test_size=start_size, stratify=y_set)
+    x_set, x_train_init, y_set, y_train_init = train_test_split(x_set, y_set, test_size=start_size, stratify=y_set)
+    _, x_pool_init, _, y_pool_init = train_test_split(x_set, y_set, test_size=pool_size, stratify=y_set)
+    train_tfms = [*rand_pad(4, 32), flip_lr(p=0.5)]  # Transformation to augment images
 
-    train_tfms = [*rand_pad(4, 32), flip_lr(p=0.5)]
     loss_func = torch.nn.CrossEntropyLoss()
-    model = AnotherConv()
-    # model = simple_cnn((3, 16, 16, 10))
 
     # Active learning
-    val_accuracy = []
+    val_accuracy = defaultdict(list)
+    methods = ['random', 'mcdue']
 
-    for i in range(steps):
-        print(f"Epoch {i+1}, train size: {len(x_train)}")
-        train_ds = ImageArrayDS(x_train, y_train, train_tfms)
-        val_ds = ImageArrayDS(x_val, y_val)
+    for method in methods:
+        x_pool, y_pool = np.copy(x_pool_init), np.copy(y_pool_init)
+        x_train, y_train = np.copy(x_train_init), np.copy(y_train_init)
 
-        data = ImageDataBunch.create(train_ds, val_ds, bs=256)
+        model = AnotherConv()
 
-        # callbacks = [partial(EarlyStoppingCallback, monitor='valid_loss', min_delta=0.001, patience=3)]
-        callbacks = []
-        learner = Learner(data, model, metrics=accuracy, loss_func=loss_func, callback_fns=callbacks) #.to_fp16()
-        # learner.fit_one_cycle(100, 3e-3, wd=0.4, div_factor=10, pct_start=0.5)
-        learner.fit(2, 3e-3, wd=0.2)
+        for i in range(steps):
+            print(f"Epoch {i+1}, train size: {len(x_train)}")
+            train_ds = ImageArrayDS(x_train, y_train, train_tfms)
+            val_ds = ImageArrayDS(x_val, y_val)
 
-        val_accuracy.append(learner.recorder.metrics[-1][0].item())
+            data = ImageDataBunch.create(train_ds, val_ds, bs=256)
 
-        x_pool, x_train, y_pool, y_train = update_set(
-            x_pool, x_train, y_pool, y_train, method='mcdue', model=model)
+            # callbacks = [partial(EarlyStoppingCallback, monitor='valid_loss', min_delta=0.001, patience=3)]
+            callbacks = []
+            learner = Learner(data, model, metrics=accuracy, loss_func=loss_func, callback_fns=callbacks) #.to_fp16()
+            # learner.fit_one_cycle(100, 3e-3, wd=0.4, div_factor=10, pct_start=0.5)
+            learner.fit(2, 3e-3, wd=0.2)
+
+            val_accuracy[method].append(learner.recorder.metrics[-1][0].item())
+
+            x_pool, x_train, y_pool, y_train = update_set(
+                x_pool, x_train, y_pool, y_train, method=method, model=model)
 
     # Display results
     plot_metric(val_accuracy)
@@ -108,16 +115,16 @@ def update_set(x_pool, x_train, y_pool, y_train, method='mcdue', model=None):
     return x_pool, x_train, y_pool, y_train
 
 
-def plot_metric(metric, title=None):
+def plot_metric(metrics, title=None):
     plt.figure(figsize=(16, 9))
     title = title or f"Validation accuracy, start size {start_size}, step size {step_size}"
     plt.title(title)
-    plt.plot(metric, label='random')
+    for name, values in metrics.items():
+        plt.plot(values, label=name)
     plt.xlabel("Steps")
     plt.ylabel("Accuracy on validation")
     plt.legend(loc='upper left')
     plt.show()
-
 
 
 if __name__ == '__main__':
