@@ -19,7 +19,8 @@ from fastai.callbacks import EarlyStoppingCallback
 
 from model.model_alternative import AnotherConv
 from dataloader.builder import build_dataset
-from uncertainty_estimator.bald import Bald
+from uncertainty_estimator.bald import Bald, BaldMasked
+from uncertainty_estimator.masks import build_mask, DEFAULT_MASKS
 
 
 plt.switch_backend('Qt4Agg')
@@ -27,12 +28,13 @@ torch.cuda.set_device(1)
 torch.backends.cudnn.benchmark = True
 
 
+# Settings
 val_size = 10_000
-pool_size = 20_000
-start_size = 2_000
+pool_size = 10_000
+start_size = 1_000
 step_size = 300
-steps = 20
-
+steps = 25
+methods = ['random', 'mcdue', *DEFAULT_MASKS]
 
 
 def main():
@@ -54,7 +56,6 @@ def main():
 
     # Active learning
     val_accuracy = defaultdict(list)
-    methods = ['random', 'mcdue']
 
     for method in methods:
         x_pool, y_pool = np.copy(x_pool_init), np.copy(y_pool_init)
@@ -76,21 +77,29 @@ def main():
 
             val_accuracy[method].append(learner.recorder.metrics[-1][0].item())
 
-            x_pool, x_train, y_pool, y_train = update_set(
-                x_pool, x_train, y_pool, y_train, method=method, model=model)
+            if i != steps - 1:
+                x_pool, x_train, y_pool, y_train = update_set(
+                    x_pool, x_train, y_pool, y_train, method=method, model=model)
 
     # Display results
     plot_metric(val_accuracy)
 
 
 def update_set(x_pool, x_train, y_pool, y_train, method='mcdue', model=None):
+    images = torch.FloatTensor(x_pool).to('cuda')
+
     if method == 'random':
         idxs = range(step_size)
     elif method == 'mcdue':
-        images = torch.FloatTensor(x_pool).to('cuda')
         estimator = Bald(model, num_classes=10, nn_runs=100)
         estimations = estimator.estimate(images)
         idxs = np.argsort(estimations)[::-1][:step_size]
+    else:
+        mask = build_mask(method)
+        estimator = BaldMasked(model, dropout_mask=mask, num_classes=10)
+        estimations = estimator.estimate(images)
+        idxs = np.argsort(estimations)[::-1][:step_size]
+
     x_add, y_add = np.copy(x_pool[idxs]), np.copy(y_pool[idxs])
     x_train = np.concatenate((x_train, x_add))
     y_train = np.concatenate((y_train, y_add))

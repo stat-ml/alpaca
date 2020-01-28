@@ -76,7 +76,6 @@ else:
     model.load_state_dict(torch.load(model_path))
 
 
-#
 images = torch.FloatTensor(x_val[:50]).to('cuda')
 mask = build_mask('l_dpp')
 estimator = BaldMasked(model, dropout_mask=mask, num_classes=10)

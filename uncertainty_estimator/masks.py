@@ -129,7 +129,6 @@ class DecorrelationMask:
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         if layer_num not in self.layer_correlations:
             x_matrix = x.cpu().numpy()
-            # print(x_matrix + 1e-)
             self.x_matrix = x_matrix
 
             noise = 1e-8 * np.random.rand(*x_matrix.shape)  # to prevent degeneration
@@ -179,7 +178,6 @@ class DPPMask:
             if self.noise:  # Add noise on diagonal to regularize
                 noise_level = dropout_rate
                 correlations = correlations + np.diag(np.random.randn(len(correlations))*noise_level)
-            print(correlations)
 
             if self.likelihood:
                 self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': correlations})
