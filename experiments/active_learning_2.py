@@ -11,11 +11,12 @@ from fastai.vision import rand_pad, flip_lr, ImageDataBunch, Learner, accuracy, 
 
 from model.model_alternative import AnotherConv
 from dataloader.builder import build_dataset
-from uncertainty_estimator.bald import Bald
+from uncertainty_estimator.bald import Bald, BaldMasked
+from uncertainty_estimator.masks import build_masks, build_mask
 
 
-plt.switch_backend('Qt4Agg')  # to work with remote server
-torch.cuda.set_device(1)
+# plt.switch_backend('Qt4Agg')  # to work with remote server
+# torch.cuda.set_device(1)
 torch.backends.cudnn.benchmark = True
 
 
@@ -77,7 +78,8 @@ else:
 
 #
 images = torch.FloatTensor(x_val[:50]).to('cuda')
-estimator = Bald(model, num_classes=10)
+mask = build_mask('l_dpp')
+estimator = BaldMasked(model, dropout_mask=mask, num_classes=10)
 estimations = estimator.estimate(images)
 idxs = np.argsort(estimations)[::-1]
 print(idxs)

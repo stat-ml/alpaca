@@ -28,26 +28,11 @@ torch.backends.cudnn.benchmark = True
 
 
 val_size = 10_000
-pool_size = 20_00
-start_size = 5_000
-step_size = 500
-steps = 3
+pool_size = 20_000
+start_size = 2_000
+step_size = 300
+steps = 20
 
-
-class ImageArrayDS(Dataset):
-    def __init__(self, images, labels, tfms=None):
-        self.images = torch.FloatTensor(images)
-        self.labels = torch.LongTensor(labels)
-        self.tfms = tfms
-
-    def __getitem__(self, idx):
-        image = Image(self.images[idx])
-        if self.tfms is not None:
-            image = image.apply_tfms(self.tfms)
-        return image, self.labels[idx]
-
-    def __len__(self):
-        return len(self.images)
 
 
 def main():
@@ -81,7 +66,6 @@ def main():
             print(f"Epoch {i+1}, train size: {len(x_train)}")
             train_ds = ImageArrayDS(x_train, y_train, train_tfms)
             val_ds = ImageArrayDS(x_val, y_val)
-
             data = ImageDataBunch.create(train_ds, val_ds, bs=256)
 
             # callbacks = [partial(EarlyStoppingCallback, monitor='valid_loss', min_delta=0.001, patience=3)]
@@ -125,6 +109,22 @@ def plot_metric(metrics, title=None):
     plt.ylabel("Accuracy on validation")
     plt.legend(loc='upper left')
     plt.show()
+
+
+class ImageArrayDS(Dataset):
+    def __init__(self, images, labels, tfms=None):
+        self.images = torch.FloatTensor(images)
+        self.labels = torch.LongTensor(labels)
+        self.tfms = tfms
+
+    def __getitem__(self, idx):
+        image = Image(self.images[idx])
+        if self.tfms is not None:
+            image = image.apply_tfms(self.tfms)
+        return image, self.labels[idx]
+
+    def __len__(self):
+        return len(self.images)
 
 
 if __name__ == '__main__':

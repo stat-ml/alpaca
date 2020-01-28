@@ -41,6 +41,11 @@ def build_masks(names=None, nn_runs=100):
     return {name: masks[name] for name in names}
 
 
+# Utility function for prototype. Better to use build_masks if you need many of them
+def build_mask(name):
+    return build_masks([name])[name]
+
+
 class BasicMask:
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         p = 1 - dropout_rate
