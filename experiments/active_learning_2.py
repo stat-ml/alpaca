@@ -1,26 +1,20 @@
 import sys
 sys.path.append('..')
-from functools import partial
 
 import torch
 from torch.utils.data import Dataset
-
-from fastai.vision import (
-    rand_pad, flip_lr, ImageDataBunch, Learner, accuracy,
-    simple_cnn, Image, cnn_learner)
-from fastai.vision.models.wrn import wrn_22
-from fastai.vision import models
-from fastai.callbacks import EarlyStoppingCallback
-
-from model.model_alternative import AnotherConv
-from dataloader.builder import build_dataset
 from sklearn.model_selection import train_test_split
-
 import numpy as np
 import matplotlib.pyplot as plt
 
+from fastai.vision import rand_pad, flip_lr, ImageDataBunch, Learner, accuracy, Image
 
-plt.switch_backend('Qt4Agg')
+from model.model_alternative import AnotherConv
+from dataloader.builder import build_dataset
+from uncertainty_estimator.bald import Bald
+
+
+plt.switch_backend('Qt4Agg')  # to work with remote server
 torch.cuda.set_device(1)
 torch.backends.cudnn.benchmark = True
 
@@ -61,18 +55,16 @@ shape = (-1, 3, 32, 32)
 x_set = ((x_set - 128)/128).reshape(shape)
 x_val = ((x_val - 128)/128).reshape(shape)
 
-# Start data split
 x_pool, x_train, y_pool, y_train = train_test_split(x_set, y_set, test_size=start_size, stratify=y_set)
 
 train_tfms = [*rand_pad(4, 32), flip_lr(p=0.5)]
-loss_func = torch.nn.CrossEntropyLoss()
-model = AnotherConv()
-
 train_ds = ImageArrayDS(x_train, y_train, train_tfms)
 val_ds = ImageArrayDS(x_val, y_val)
-
 data = ImageDataBunch.create(train_ds, val_ds, bs=256)
 
+
+loss_func = torch.nn.CrossEntropyLoss()
+model = AnotherConv()
 learner = Learner(data, model, metrics=accuracy, loss_func=loss_func)
 
 model_path = "experiments/data/model.pt"
@@ -83,8 +75,12 @@ else:
     model.load_state_dict(torch.load(model_path))
 
 
+#
 images = torch.FloatTensor(x_val[:50]).to('cuda')
-print(model(images).shape)
+estimator = Bald(model, num_classes=10)
+estimations = estimator.estimate(images)
 
-
+idxs = np.argsort(estimations)[::-1]
+print(idxs)
+print(estimations[idxs])
 

@@ -87,6 +87,7 @@ class BaldEnsemble:
 def _entropy(x):
     return np.sum(-x*np.log(np.clip(x, 1e-6, 1)), axis=-1)
 
+
 def _bald(logits):
     predictions = softmax(logits, axis=-1)
 
@@ -94,4 +95,3 @@ def _bald(logits):
     predictive_entropy = _entropy(np.mean(predictions, axis=1))
 
     return predictive_entropy - expected_entropy
-
