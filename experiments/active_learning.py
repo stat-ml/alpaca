@@ -35,6 +35,11 @@ start_size = 1_000
 step_size = 300
 steps = 25
 methods = ['random', 'mcdue', *DEFAULT_MASKS]
+epochs_per_step = 3
+start_lr = 3e-3
+weight_decay = 0.2
+batch_size = 256
+
 
 
 def main():
@@ -67,13 +72,10 @@ def main():
             print(f"Epoch {i+1}, train size: {len(x_train)}")
             train_ds = ImageArrayDS(x_train, y_train, train_tfms)
             val_ds = ImageArrayDS(x_val, y_val)
-            data = ImageDataBunch.create(train_ds, val_ds, bs=256)
+            data = ImageDataBunch.create(train_ds, val_ds, bs=batch_size)
 
-            # callbacks = [partial(EarlyStoppingCallback, monitor='valid_loss', min_delta=0.001, patience=3)]
-            callbacks = []
-            learner = Learner(data, model, metrics=accuracy, loss_func=loss_func, callback_fns=callbacks) #.to_fp16()
-            # learner.fit_one_cycle(100, 3e-3, wd=0.4, div_factor=10, pct_start=0.5)
-            learner.fit(2, 3e-3, wd=0.2)
+            learner = Learner(data, model, metrics=accuracy, loss_func=loss_func)
+            learner.fit(epochs_per_step, start_lr, wd=weight_decay)
 
             val_accuracy[method].append(learner.recorder.metrics[-1][0].item())
 
@@ -96,9 +98,10 @@ def update_set(x_pool, x_train, y_pool, y_train, method='mcdue', model=None):
         idxs = np.argsort(estimations)[::-1][:step_size]
     else:
         mask = build_mask(method)
-        estimator = BaldMasked(model, dropout_mask=mask, num_classes=10)
+        estimator = BaldMasked(model, dropout_mask=mask, num_classes=10, nn_runs=100)
         estimations = estimator.estimate(images)
         idxs = np.argsort(estimations)[::-1][:step_size]
+        mask.reset()
 
     x_add, y_add = np.copy(x_pool[idxs]), np.copy(y_pool[idxs])
     x_train = np.concatenate((x_train, x_add))
