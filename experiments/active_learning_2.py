@@ -30,6 +30,7 @@ val_size = 10_000
 start_size = 5_000
 step_size = 500
 steps = 20
+retrain = False
 
 
 class ImageArrayDS(Dataset):
@@ -47,6 +48,10 @@ class ImageArrayDS(Dataset):
     def __len__(self):
         return len(self.images)
 
+    def get_state(self):
+        pass
+
+
 # Load data
 dataset = build_dataset('cifar_10', val_size=10_000)
 x_set, y_set = dataset.dataset('train')
@@ -62,44 +67,24 @@ x_pool, x_train, y_pool, y_train = train_test_split(x_set, y_set, test_size=star
 train_tfms = [*rand_pad(4, 32), flip_lr(p=0.5)]
 loss_func = torch.nn.CrossEntropyLoss()
 model = AnotherConv()
-# model = simple_cnn((3, 16, 16, 10))
 
+train_ds = ImageArrayDS(x_train, y_train, train_tfms)
+val_ds = ImageArrayDS(x_val, y_val)
 
+data = ImageDataBunch.create(train_ds, val_ds, bs=256)
 
-# Active learning
-train_sizes = []
-train_losses = []
-val_losses = []
-val_accuracy = []
+learner = Learner(data, model, metrics=accuracy, loss_func=loss_func)
 
-for i in range(steps):
-    print(f"Epoch {i+1}, train size: {len(x_train)}")
-    train_ds = ImageArrayDS(x_train, y_train, train_tfms)
-    val_ds = ImageArrayDS(x_val, y_val)
-
-    data = ImageDataBunch.create(train_ds, val_ds, bs=256)
-
-    # callbacks = [partial(EarlyStoppingCallback, monitor='valid_loss', min_delta=0.001, patience=3)]
-    callbacks = []
-    learner = Learner(data, model, metrics=accuracy, loss_func=loss_func, callback_fns=callbacks) #.to_fp16()
-    # learner.fit_one_cycle(100, 3e-3, wd=0.4, div_factor=10, pct_start=0.5)
+model_path = "experiments/data/model.pt"
+if retrain:
     learner.fit(2, 3e-3, wd=0.2)
-
-    train_losses.append(learner.recorder.losses[-1])
-    val_losses.append(learner.recorder.val_losses[-1])
-    val_accuracy.append(learner.recorder.metrics[-1][0].item())
-    train_sizes.append(len(x_train))
-
-    x_pool, x_add, y_pool, y_add = train_test_split(x_pool, y_pool, test_size=step_size, stratify=y_pool)
-    x_train = np.concatenate((x_train, x_add))
-    y_train = np.concatenate((y_train, y_add))
+    torch.save(model.state_dict(), model_path)
+else:
+    model.load_state_dict(torch.load(model_path))
 
 
-# Display results
-plt.figure(figsize=(16, 9))
-plt.title(f"Validation accuracy, start size {start_size}, step size {step_size}")
-plt.plot(val_accuracy, label='random')
-plt.xlabel("Steps")
-plt.ylabel("Accuracy on validation")
-plt.legend(loc='upper left')
-plt.show()
+images = torch.FloatTensor(x_val[:50]).to('cuda')
+print(model(images).shape)
+
+
+
