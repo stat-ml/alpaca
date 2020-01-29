@@ -72,18 +72,18 @@ data = ImageDataBunch.create(train_ds, val_ds, bs=256)
 
 loss_func = torch.nn.CrossEntropyLoss()
 # model = AnotherConv()
-model = create_cnn_model(resnet18masked, 10)
+model = create_cnn_model(resnet18masked, 10, pretrained=False)
 learner = Learner(data, model, metrics=accuracy, loss_func=loss_func)
 
 model_path = "experiments/data/model_resnet.pt"
 if retrain or not os.path.exists(model_path):
-    learner.fit(1, 3e-3, wd=0.2)
+    learner.fit(2, 3e-3, wd=0.2)
     torch.save(model.state_dict(), model_path)
 else:
     model.load_state_dict(torch.load(model_path))
 
 
-images = torch.FloatTensor(x_val[:50]).to('cuda')
+images = torch.FloatTensor(x_val[:5]).to('cuda')
 mask = build_mask('l_dpp')
 # estimator = BaldMasked(model, dropout_mask=mask, num_classes=10)
 estimator = Bald(model, num_classes=10)
