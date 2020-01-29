@@ -1,6 +1,5 @@
 import sys
 sys.path.append('..')
-from functools import partial
 from collections import defaultdict
 
 import numpy as np
@@ -10,12 +9,7 @@ from sklearn.model_selection import train_test_split
 import torch
 from torch.utils.data import Dataset
 
-from fastai.vision import (
-    rand_pad, flip_lr, ImageDataBunch, Learner, accuracy,
-    simple_cnn, Image, cnn_learner)
-from fastai.vision.models.wrn import wrn_22
-from fastai.vision import models
-from fastai.callbacks import EarlyStoppingCallback
+from fastai.vision import (rand_pad, flip_lr, ImageDataBunch, Learner, accuracy, Image)
 
 from model.model_alternative import AnotherConv
 from dataloader.builder import build_dataset
@@ -23,7 +17,7 @@ from uncertainty_estimator.bald import Bald, BaldMasked
 from uncertainty_estimator.masks import build_mask, DEFAULT_MASKS
 
 
-plt.switch_backend('Qt4Agg')
+# plt.switch_backend('Qt4Agg')  # to plot over ssh
 torch.cuda.set_device(1)
 torch.backends.cudnn.benchmark = True
 
@@ -33,13 +27,12 @@ val_size = 10_000
 pool_size = 10_000
 start_size = 1_000
 step_size = 300
-steps = 25
-methods = ['random', 'mcdue', *DEFAULT_MASKS]
+steps = 20
+methods = ['random', *DEFAULT_MASKS]
 epochs_per_step = 3
 start_lr = 3e-3
 weight_decay = 0.2
 batch_size = 256
-
 
 
 def main():
@@ -63,6 +56,7 @@ def main():
     val_accuracy = defaultdict(list)
 
     for method in methods:
+        print(f"== {method} ==")
         x_pool, y_pool = np.copy(x_pool_init), np.copy(y_pool_init)
         x_train, y_train = np.copy(x_train_init), np.copy(y_train_init)
 
@@ -95,13 +89,13 @@ def update_set(x_pool, x_train, y_pool, y_train, method='mcdue', model=None):
     elif method == 'mcdue':
         estimator = Bald(model, num_classes=10, nn_runs=100)
         estimations = estimator.estimate(images)
-        idxs = np.argsort(estimations)[::-1][:step_size]
+        idxs = np.argsort(estimations)[::-1][:step_size]  # Select most uncertain
     else:
         mask = build_mask(method)
         estimator = BaldMasked(model, dropout_mask=mask, num_classes=10, nn_runs=100)
         estimations = estimator.estimate(images)
         idxs = np.argsort(estimations)[::-1][:step_size]
-        mask.reset()
+        estimator.reset()
 
     x_add, y_add = np.copy(x_pool[idxs]), np.copy(y_pool[idxs])
     x_train = np.concatenate((x_train, x_add))

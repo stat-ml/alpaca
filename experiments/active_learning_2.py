@@ -77,7 +77,7 @@ else:
 
 
 images = torch.FloatTensor(x_val[:50]).to('cuda')
-mask = build_mask('l_dpp')
+mask = build_mask('rank_l_dpp')
 estimator = BaldMasked(model, dropout_mask=mask, num_classes=10)
 estimations = estimator.estimate(images)
 idxs = np.argsort(estimations)[::-1]

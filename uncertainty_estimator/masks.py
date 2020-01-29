@@ -236,8 +236,7 @@ class DPPRankMask:
         if layer_num not in self.layer_correlations:
             x_matrix = x.cpu().numpy()
 
-            noise = 1e-8 * np.random.rand(*x_matrix.shape)  # to prevent degeneration
-            x_matrix = x_matrix + noise
+            x_matrix = x_matrix
             correlations = np.abs(np.corrcoef(x_matrix.T))
 
             self.layer_correlations[layer_num] = correlations
