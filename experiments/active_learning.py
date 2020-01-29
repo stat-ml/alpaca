@@ -12,6 +12,7 @@ from torch.utils.data import Dataset
 from fastai.vision import (rand_pad, flip_lr, ImageDataBunch, Learner, accuracy, Image)
 
 from model.model_alternative import AnotherConv
+from model.resnet import resnet_masked
 from dataloader.builder import build_dataset
 from uncertainty_estimator.bald import Bald, BaldMasked
 from uncertainty_estimator.masks import build_mask, DEFAULT_MASKS
@@ -27,12 +28,13 @@ val_size = 10_000
 pool_size = 10_000
 start_size = 2_000
 step_size = 500
-steps = 20
+steps = 2
 methods = ['random', *DEFAULT_MASKS]
 epochs_per_step = 3
-start_lr = 3e-3
+start_lr = 5e-4
 weight_decay = 0.2
 batch_size = 256
+model_type = 'resnet'  # 'conv'
 
 
 def main():
@@ -60,7 +62,7 @@ def main():
         x_pool, y_pool = np.copy(x_pool_init), np.copy(y_pool_init)
         x_train, y_train = np.copy(x_train_init), np.copy(y_train_init)
 
-        model = AnotherConv()
+        model = build_model(model_type)
 
         for i in range(steps):
             print(f"Epoch {i+1}, train size: {len(x_train)}")
@@ -107,7 +109,7 @@ def update_set(x_pool, x_train, y_pool, y_train, method='mcdue', model=None):
 
 def plot_metric(metrics, title=None):
     plt.figure(figsize=(16, 9))
-    title = title or f"Validation accuracy, start size {start_size}, step size {step_size}"
+    title = title or f"Validation accuracy, start size {start_size}, step size {step_size}, model {model_type}"
     plt.title(title)
     for name, values in metrics.items():
         plt.plot(values, label=name)
@@ -131,6 +133,14 @@ class ImageArrayDS(Dataset):
 
     def __len__(self):
         return len(self.images)
+
+
+def build_model(model_type):
+    if model_type == 'conv':
+        model = AnotherConv()
+    elif model_type == 'resnet':
+        model = resnet_masked(pretrained=True)
+    return model
 
 
 if __name__ == '__main__':
