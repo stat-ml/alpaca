@@ -18,7 +18,8 @@ class Bald:
 
         with torch.no_grad():
             for nn_run in range(self.nn_runs):
-                prediction = self.net(X_pool, dropout_rate=self.dropout_rate)
+                # prediction = self.net(X_pool, dropout_rate=self.dropout_rate)
+                prediction = self.net(X_pool)
                 mcd_runs[:, nn_run] = prediction.to('cpu')
 
         return _bald(mcd_runs)

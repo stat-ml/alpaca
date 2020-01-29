@@ -25,8 +25,8 @@ torch.backends.cudnn.benchmark = True
 # Settings
 val_size = 10_000
 pool_size = 10_000
-start_size = 1_000
-step_size = 300
+start_size = 2_000
+step_size = 500
 steps = 20
 methods = ['random', *DEFAULT_MASKS]
 epochs_per_step = 3

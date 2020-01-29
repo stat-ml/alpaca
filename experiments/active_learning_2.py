@@ -1,3 +1,4 @@
+import os
 import sys
 sys.path.append('..')
 
@@ -7,7 +8,9 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import matplotlib.pyplot as plt
 
-from fastai.vision import rand_pad, flip_lr, ImageDataBunch, Learner, accuracy, Image
+from fastai.vision import rand_pad, flip_lr, ImageDataBunch, Learner, accuracy, Image, create_cnn_model
+from fastai.vision import models
+from model.resnet import resnet18masked
 
 from model.model_alternative import AnotherConv
 from dataloader.builder import build_dataset
@@ -25,7 +28,7 @@ val_size = 10_000
 start_size = 5_000
 step_size = 500
 steps = 20
-retrain = False
+retrain = True
 
 
 class ImageArrayDS(Dataset):
@@ -64,21 +67,26 @@ val_ds = ImageArrayDS(x_val, y_val)
 data = ImageDataBunch.create(train_ds, val_ds, bs=256)
 
 
+
+
+
 loss_func = torch.nn.CrossEntropyLoss()
-model = AnotherConv()
+# model = AnotherConv()
+model = create_cnn_model(resnet18masked, 10)
 learner = Learner(data, model, metrics=accuracy, loss_func=loss_func)
 
-model_path = "experiments/data/model.pt"
-if retrain:
-    learner.fit(2, 3e-3, wd=0.2)
+model_path = "experiments/data/model_resnet.pt"
+if retrain or not os.path.exists(model_path):
+    learner.fit(1, 3e-3, wd=0.2)
     torch.save(model.state_dict(), model_path)
 else:
     model.load_state_dict(torch.load(model_path))
 
 
 images = torch.FloatTensor(x_val[:50]).to('cuda')
-mask = build_mask('rank_l_dpp')
-estimator = BaldMasked(model, dropout_mask=mask, num_classes=10)
+mask = build_mask('l_dpp')
+# estimator = BaldMasked(model, dropout_mask=mask, num_classes=10)
+estimator = Bald(model, num_classes=10)
 estimations = estimator.estimate(images)
 idxs = np.argsort(estimations)[::-1]
 print(idxs)
