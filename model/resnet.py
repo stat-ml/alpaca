@@ -12,7 +12,7 @@ model_urls = {
 
 
 class ResNetMasked(ResNet):
-    def forward(self, x):
+    def forward(self, x, dropout_rate=0.5, dropout_mask=None):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -25,6 +25,8 @@ class ResNetMasked(ResNet):
 
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
+        if dropout_mask is not None:
+            x = x * dropout_mask(x, dropout_rate, 0)
         x = self.fc(x)
 
         return x

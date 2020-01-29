@@ -28,7 +28,7 @@ val_size = 10_000
 start_size = 5_000
 step_size = 500
 steps = 20
-retrain = True
+retrain = False
 
 
 class ImageArrayDS(Dataset):
@@ -59,7 +59,8 @@ shape = (-1, 3, 32, 32)
 x_set = ((x_set - 128)/128).reshape(shape)
 x_val = ((x_val - 128)/128).reshape(shape)
 
-x_pool, x_train, y_pool, y_train = train_test_split(x_set, y_set, test_size=start_size, stratify=y_set)
+# x_pool, x_train, y_pool, y_train = train_test_split(x_set, y_set, test_size=start_size, stratify=y_set)
+x_train, y_train = x_set,  y_set
 
 train_tfms = [*rand_pad(4, 32), flip_lr(p=0.5)]
 train_ds = ImageArrayDS(x_train, y_train, train_tfms)
@@ -70,28 +71,29 @@ data = ImageDataBunch.create(train_ds, val_ds, bs=256)
 loss_func = torch.nn.CrossEntropyLoss()
 
 
-
-
-# model = AnotherConv()
-model = resnet_masked()
+model = AnotherConv()
+model = resnet_masked(pretrained=True)
 learner = Learner(data, model, metrics=accuracy, loss_func=loss_func)
-learner.fit(5, 5e-4, wd=0.2)
+
+model_path = "experiments/data/model_resnet.pt"
+if retrain or not os.path.exists(model_path):
+    learner.fit(10, 5e-4, wd=0.2)
+    torch.save(model.state_dict(), model_path)
+else:
+    model.load_state_dict(torch.load(model_path))
 
 
-# model_path = "experiments/data/model_resnet.pt"
-# if retrain or not os.path.exists(model_path):
-#     learner.fit(2, 3e-3, wd=0.2)
-#     torch.save(model.state_dict(), model_path)
-# else:
-#     model.load_state_dict(torch.load(model_path))
+images = torch.FloatTensor(x_val[:20]).to('cuda')
+
+# print(np.argmax(model(images).detach().cpu().numpy(), axis=1))
+# print(y_val[:20])
 
 
-# images = torch.FloatTensor(x_val[:5]).to('cuda')
-# mask = build_mask('l_dpp')
-# # estimator = BaldMasked(model, dropout_mask=mask, num_classes=10)
+mask = build_mask('basic_bern')
+estimator = BaldMasked(model, dropout_mask=mask, num_classes=10)
 # estimator = Bald(model, num_classes=10)
-# estimations = estimator.estimate(images)
-# idxs = np.argsort(estimations)[::-1]
-# print(idxs)
-# print(estimations[idxs])
+estimations = estimator.estimate(images)
+idxs = np.argsort(estimations)[::-1]
+print(idxs)
+print(estimations[idxs])
 
