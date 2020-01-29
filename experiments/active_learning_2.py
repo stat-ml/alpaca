@@ -10,8 +10,9 @@ import matplotlib.pyplot as plt
 
 from fastai.vision import rand_pad, flip_lr, ImageDataBunch, Learner, accuracy, Image, create_cnn_model
 from fastai.vision import models
-from model.resnet import resnet_masked
+from dppy.finite_dpps import FiniteDPP
 
+from model.resnet import resnet_masked
 from model.model_alternative import AnotherConv
 from dataloader.builder import build_dataset
 from uncertainty_estimator.bald import Bald, BaldMasked
@@ -29,6 +30,7 @@ start_size = 5_000
 step_size = 500
 steps = 20
 retrain = False
+nn_runs = 100
 
 
 class ImageArrayDS(Dataset):
@@ -72,10 +74,10 @@ loss_func = torch.nn.CrossEntropyLoss()
 
 
 model = AnotherConv()
-model = resnet_masked(pretrained=True)
+# model = resnet_masked(pretrained=True)
 learner = Learner(data, model, metrics=accuracy, loss_func=loss_func)
 
-model_path = "experiments/data/model_resnet.pt"
+model_path = "experiments/data/model.pt"
 if retrain or not os.path.exists(model_path):
     learner.fit(10, 5e-4, wd=0.2)
     torch.save(model.state_dict(), model_path)
@@ -85,15 +87,23 @@ else:
 
 images = torch.FloatTensor(x_val[:20]).to('cuda')
 
-# print(np.argmax(model(images).detach().cpu().numpy(), axis=1))
-# print(y_val[:20])
+print(np.argmax(model(images).detach().cpu().numpy(), axis=1))
+print(y_val[:20])
 
 
+step_size = 10
 mask = build_mask('basic_bern')
-estimator = BaldMasked(model, dropout_mask=mask, num_classes=10)
-# estimator = Bald(model, num_classes=10)
+estimator = BaldMasked(model, dropout_mask=mask, num_classes=10, keep_runs=True, nn_runs=nn_runs)
 estimations = estimator.estimate(images)
-idxs = np.argsort(estimations)[::-1]
+mcd = estimator.last_mcd_runs().reshape(20, nn_runs*10)
+dpp = FiniteDPP('likelihood', L=np.corrcoef(mcd))
+idxs = set()
+while len(idxs) < step_size:
+    dpp.sample_exact()
+    idxs.update(dpp.list_of_samples[-1])
+idxs = list(idxs)[:step_size]
+
+# idxs = np.argsort(estimations)[::-1]
 print(idxs)
 print(estimations[idxs])
 

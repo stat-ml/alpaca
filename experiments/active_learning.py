@@ -10,6 +10,7 @@ import torch
 from torch.utils.data import Dataset
 
 from fastai.vision import (rand_pad, flip_lr, ImageDataBunch, Learner, accuracy, Image)
+from dppy.finite_dpps import FiniteDPP
 
 from model.model_alternative import AnotherConv
 from model.resnet import resnet_masked
@@ -19,7 +20,7 @@ from uncertainty_estimator.masks import build_mask, DEFAULT_MASKS
 
 
 # plt.switch_backend('Qt4Agg')  # to plot over ssh
-torch.cuda.set_device(1)
+# torch.cuda.set_device(1)
 torch.backends.cudnn.benchmark = True
 
 
@@ -28,13 +29,16 @@ val_size = 10_000
 pool_size = 10_000
 start_size = 2_000
 step_size = 500
-steps = 2
-methods = ['random', *DEFAULT_MASKS]
+steps = 20
+# methods = ['random', *DEFAULT_MASKS]
+methods = ['random', 'AL_dpp', *DEFAULT_MASKS]
 epochs_per_step = 3
 start_lr = 5e-4
 weight_decay = 0.2
 batch_size = 256
-model_type = 'resnet'  # 'conv'
+nn_runs = 100
+# model_type = 'resnet'
+model_type = 'conv'
 
 
 def main():
@@ -65,7 +69,7 @@ def main():
         model = build_model(model_type)
 
         for i in range(steps):
-            print(f"Epoch {i+1}, train size: {len(x_train)}")
+            print(f"Step {i+1}, train size: {len(x_train)}")
             train_ds = ImageArrayDS(x_train, y_train, train_tfms)
             val_ds = ImageArrayDS(x_val, y_val)
             data = ImageDataBunch.create(train_ds, val_ds, bs=batch_size)
@@ -89,12 +93,23 @@ def update_set(x_pool, x_train, y_pool, y_train, method='mcdue', model=None):
     if method == 'random':
         idxs = range(step_size)
     elif method == 'mcdue':
-        estimator = Bald(model, num_classes=10, nn_runs=100)
+        estimator = Bald(model, num_classes=10, nn_runs=nn_runs)
         estimations = estimator.estimate(images)
         idxs = np.argsort(estimations)[::-1][:step_size]  # Select most uncertain
+    elif method == 'AL_dpp':
+        mask = build_mask('basic_bern')
+        estimator = BaldMasked(model, dropout_mask=mask, num_classes=10, keep_runs=True, nn_runs=nn_runs)
+        estimator.estimate(images)  # to generate mcd
+        mcd = estimator.last_mcd_runs().reshape(-1, nn_runs * 10)
+        dpp = FiniteDPP('likelihood', **{'L': np.corrcoef(mcd)})
+        idxs = set()
+        while len(idxs) < step_size:
+            dpp.sample_exact()
+            idxs.update(dpp.list_of_samples[-1])
+        idxs = list(idxs)[:step_size]
     else:
         mask = build_mask(method)
-        estimator = BaldMasked(model, dropout_mask=mask, num_classes=10, nn_runs=100)
+        estimator = BaldMasked(model, dropout_mask=mask, num_classes=10, nn_runs=nn_runs)
         estimations = estimator.estimate(images)
         idxs = np.argsort(estimations)[::-1][:step_size]
         estimator.reset()
