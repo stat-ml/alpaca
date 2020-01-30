@@ -20,7 +20,7 @@ from uncertainty_estimator.masks import build_mask, DEFAULT_MASKS
 
 
 # plt.switch_backend('Qt4Agg')  # to plot over ssh
-# torch.cuda.set_device(1)
+torch.cuda.set_device(1)
 torch.backends.cudnn.benchmark = True
 
 
@@ -31,14 +31,15 @@ start_size = 2_000
 step_size = 500
 steps = 20
 # methods = ['random', *DEFAULT_MASKS]
-methods = ['random', 'AL_dpp', *DEFAULT_MASKS]
+# methods = ['random', 'AL_dpp', *DEFAULT_MASKS]
+methods = ['l_dpp_noisereg']
 epochs_per_step = 3
 start_lr = 5e-4
 weight_decay = 0.2
 batch_size = 256
 nn_runs = 100
-# model_type = 'resnet'
-model_type = 'conv'
+model_type = 'resnet'
+# model_type = 'conv'
 
 
 def main():

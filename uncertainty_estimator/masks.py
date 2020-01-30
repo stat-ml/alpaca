@@ -152,13 +152,14 @@ class DecorrelationMask:
 
 
 class DPPMask:
-    def __init__(self, noise=False, likelihood=False, ht_norm=False):
+    def __init__(self, noise=False, likelihood=False, ht_norm=False, noise_level=1e-4):
         self.layer_correlations = {}
         self.dpps = {}
         self.norm = {}
         self.drop_mask = True
 
         self.noise = noise
+        self.noise_level = noise_level
         self.likelihood = likelihood
         self.ht_norm = ht_norm
 
@@ -176,8 +177,7 @@ class DPPMask:
             correlations = np.corrcoef(x_matrix.T)
 
             if self.noise:  # Add noise on diagonal to regularize
-                noise_level = dropout_rate
-                correlations = correlations + np.diag(np.random.randn(len(correlations))*noise_level)
+                correlations = correlations + np.diag(np.ones(len(correlations))*self.noise_level)
 
             if self.likelihood:
                 self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': correlations})
