@@ -2,6 +2,7 @@ from os import path
 
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import fetch_openml
+import numpy as np
 
 from experiment_setup import ROOT_DIR
 from .saver import DataSaver
@@ -21,6 +22,7 @@ class Openml:
     def _build_dataset(self, cache_dir):
         if not path.exists(cache_dir):
             x, y = fetch_openml(self.name, return_X_y=True, cache=True)
+            y = y.astype(np.int)
             self.saver.save(x, y)
         else:
             x, y = self.saver.load()
@@ -51,5 +53,4 @@ class FashionMnistData(Openml):
 class Cifar10(Openml):
     def __init__(self, **kwargs):
         super().__init__('CIFAR_10', **kwargs)
-
 

@@ -5,7 +5,9 @@ from torch.utils.data import TensorDataset, DataLoader
 
 
 class Trainer:
-    def __init__(self, model, batch_size=128, lr=1e-3, dropout_train=0.5, weight_decay=1e-4):
+    def __init__(
+            self, model, batch_size=128, lr=1e-3, dropout_train=0.5, weight_decay=1e-4,
+            loss=None, regression=False):
         self.model = model
         self.device = 'cuda'
         self.model.to(self.device)
@@ -15,7 +17,16 @@ class Trainer:
         self.dropout_train = dropout_train
         self.batch_size = batch_size
 
-    def fit(self, train_set, val_set, epochs=10, log_interval=1000, verbose=False, patience=5):
+        self.loss = loss or F.cross_entropy
+        self.regression = regression
+
+        self.val_loss_history = []
+        self.train_loss_history = []
+
+    def fit(self, train_set, val_set, epochs=10, log_interval=1000, verbose=False, patience=5, dropout_rate=None):
+        if dropout_rate is None:
+            dropout_rate = self.dropout_train
+
         self.model.train()
         loader = self._to_loader(*train_set)
         val_loader = self._to_loader(*val_set)
@@ -26,9 +37,8 @@ class Trainer:
             for batch_idx, (data, target) in enumerate(loader):
                 data, target = data.to(self.device), target.to(self.device)
                 self.optimizer.zero_grad()
-                # import pdb; pdb.set_trace()
-                output = self.model(data, dropout_rate=0.5)
-                loss = F.cross_entropy(output, target)
+                output = self.model(data, dropout_rate=dropout_rate)
+                loss = self.loss(output, target)
                 loss.backward()
                 self.optimizer.step()
 
@@ -61,6 +71,9 @@ class Trainer:
                 epoch, int(percent*len(loader.dataset)), len(loader.dataset), 100 * percent,
                 loss.item(), val_loss))
 
+            self.val_loss_history.append(val_loss)
+            self.train_loss_history.append(loss)
+
     def evaluate(self, val_loader):
         if not isinstance(val_loader, DataLoader):
             if len(val_loader) == 1:
@@ -73,7 +86,7 @@ class Trainer:
             for data, target in val_loader:
                 data, target = data.to(self.device), target.to(self.device)
                 output = self.model(data, dropout_rate=0)
-                losses.append(F.cross_entropy(output, target).item())
+                losses.append(self.loss(output, target).item())
         return np.mean(losses)
 
     def predict(self, x, logits=False):
@@ -84,7 +97,7 @@ class Trainer:
             for batch in loader:
                 batch = batch[0].to(self.device)
                 prediction = self.model(batch)
-                if not logits:
+                if not logits and not self.regression:
                     prediction = prediction.argmax(dim=1, keepdim=True)
                 predictions.append(prediction.cpu())
             predictions = torch.cat(predictions).numpy()
@@ -94,7 +107,10 @@ class Trainer:
         if y is None:
             ds = TensorDataset(torch.FloatTensor(x))
         else:
-            ds = TensorDataset(torch.FloatTensor(x), torch.LongTensor(y.reshape(-1)))
+            if self.regression:
+                ds = TensorDataset(torch.FloatTensor(x), torch.FloatTensor(y))
+            else:
+                ds = TensorDataset(torch.FloatTensor(x), torch.LongTensor(y.reshape(-1)))
         loader = DataLoader(ds, batch_size=self.batch_size, shuffle=shuffle)
         return loader
 

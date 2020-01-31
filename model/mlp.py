@@ -103,6 +103,7 @@ class MLP(BaseMLP):
             postprocessing = lambda x: x
 
         super(MLP, self).__init__(layer_sizes, postprocessing, activation)
+
         self.criterion = loss()
 
         if optimizer is None:
