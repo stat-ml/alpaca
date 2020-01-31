@@ -10,7 +10,7 @@ class Dense(nn.Module):
 
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         if activation is None:
-            self.activation = F.leaky_relu
+            self.activation = F.elu
         else:
             self.activation = activation
 

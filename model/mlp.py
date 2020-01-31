@@ -22,13 +22,14 @@ class BaseMLP(nn.Module):
         
         self.double()
         self.to(self.device)
+        self.activation = F.elu
 
     def forward(self, x, dropout_rate=0, train=False, dropout_mask=None):
         out = torch.DoubleTensor(x).to(self.device) if isinstance(x, np.ndarray) else x
-        out = F.leaky_relu(self.fcs[0](out))
+        out = self.activation(self.fcs[0](out))
 
         for layer_num, fc in enumerate(self.fcs[1:-1]):
-            out = F.leaky_relu(fc(out))
+            out = self.activation(fc(out))
             if dropout_mask is None:
                 out = nn.Dropout(dropout_rate)(out)
             else:

@@ -17,6 +17,7 @@ from model.resnet import resnet_masked
 from dataloader.builder import build_dataset
 from uncertainty_estimator.bald import Bald, BaldMasked
 from uncertainty_estimator.masks import build_mask, DEFAULT_MASKS
+from experiments.utils.fastai import ImageArrayDS
 
 
 # plt.switch_backend('Qt4Agg')  # to plot over ssh
@@ -133,22 +134,6 @@ def plot_metric(metrics, title=None):
     plt.ylabel("Accuracy on validation")
     plt.legend(loc='upper left')
     plt.show()
-
-
-class ImageArrayDS(Dataset):
-    def __init__(self, images, labels, tfms=None):
-        self.images = torch.FloatTensor(images)
-        self.labels = torch.LongTensor(labels)
-        self.tfms = tfms
-
-    def __getitem__(self, idx):
-        image = Image(self.images[idx])
-        if self.tfms is not None:
-            image = image.apply_tfms(self.tfms)
-        return image, self.labels[idx]
-
-    def __len__(self):
-        return len(self.images)
 
 
 def build_model(model_type):
