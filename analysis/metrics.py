@@ -3,9 +3,9 @@ from math import log2
 from scipy.stats import percentileofscore
 
 
-def get_uq_metrics(estimations, errors, acc_percentile=0.1):
+def get_uq_metrics(estimations, errors, acc_percentile=0.1, **kwargs):
     acc = uq_accuracy(estimations, errors, acc_percentile)
-    ndcg = uq_ndcg(errors, estimations)
+    ndcg = uq_ndcg(errors, estimations, **kwargs)
     ll = uq_ll(errors, estimations)
     return acc, ndcg, ll
 
