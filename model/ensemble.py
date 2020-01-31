@@ -2,13 +2,14 @@ from .mlp import MLP
 from collections import OrderedDict
 from itertools import count
 import torch
-
+import torch.nn.functional as F
 
 class MLPEnsemble:
-    def __init__(self, layers, n_models, reduction='mean', **kwargs):
+    def __init__(self, layers, n_models, activation = F.leaky_relu,
+                 reduction='mean', **kwargs):
         
         self.n_models = n_models
-        self.models = [MLP(layers, **kwargs) for i in range(n_models)]
+        self.models = [MLP(layers, activation, **kwargs) for i in range(n_models)]
         self.reduction = reduction
 
     def fit(self, train_set, val_set, verbose=True, **kwargs):

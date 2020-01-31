@@ -7,7 +7,8 @@ from dataloader.custom_dataset import loader
 
 
 class BaseMLP(nn.Module):
-    def __init__(self, layer_sizes, postprocessing=lambda x: x):
+    def __init__(self, layer_sizes, postprocessing=lambda x: x,
+                activation = F.leaky_relu):
         super(BaseMLP, self).__init__()
 
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -19,7 +20,7 @@ class BaseMLP(nn.Module):
             setattr(self, 'fc'+str(i), fc)  # to register params
             self.fcs.append(fc)
         self.postprocessing = postprocessing
-        
+        self.activation = activation
         self.double()
         self.to(self.device)
 
@@ -28,7 +29,7 @@ class BaseMLP(nn.Module):
         out = F.leaky_relu(self.fcs[0](out))
 
         for layer_num, fc in enumerate(self.fcs[1:-1]):
-            out = F.leaky_relu(fc(out))
+            out = self.activation(fc(out))
             if dropout_mask is None:
                 out = nn.Dropout(dropout_rate)(out)
             else:
@@ -97,11 +98,12 @@ class BaseMLP(nn.Module):
 
 class MLP(BaseMLP):
     def __init__(self, layer_sizes, l2_reg=1e-5, postprocessing=None, loss=nn.MSELoss,
-                 optimizer=None):
+                 optimizer=None, activation = F.leaky_relu):
         if postprocessing is None:
             postprocessing = lambda x: x
 
-        super(MLP, self).__init__(layer_sizes, postprocessing)
+        super(MLP, self).__init__(layer_sizes, postprocessing, activation)
+
         self.criterion = loss()
 
         if optimizer is None:
