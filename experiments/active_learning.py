@@ -34,7 +34,8 @@ step_size = 500
 steps = 20
 # methods = ['random', *DEFAULT_MASKS]
 # methods = ['random', 'AL_dpp', *DEFAULT_MASKS]
-methods = ['error_oracle', 'random']
+# methods = ['error_oracle', 'random']
+methods = ["stoch_oracle", "random"]
 epochs_per_step = 3
 start_lr = 5e-4
 weight_decay = 0.2
@@ -114,6 +115,10 @@ def update_set(x_pool, x_train, y_pool, y_train, method='mcdue', model=None):
         predictions = F.softmax(model(images), dim=1).detach().cpu().numpy()
         errors = -np.log(predictions[np.arange(len(predictions)),  y_pool])
         idxs = np.argsort(errors)[::-1][:step_size]
+    elif method == 'stoch_oracle':
+        predictions = F.softmax(model(images), dim=1).detach().cpu().numpy()
+        errors = -np.log(predictions[np.arange(len(predictions)), y_pool])
+        idxs = np.random.choice(len(predictions), step_size, replace=False, p=errors/sum(errors))
     else:
         mask = build_mask(method)
         estimator = BaldMasked(model, dropout_mask=mask, num_classes=10, nn_runs=nn_runs)
