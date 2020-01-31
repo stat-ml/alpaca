@@ -1,5 +1,4 @@
 import sys
-sys.path.append('..')
 from collections import defaultdict
 
 import numpy as np
@@ -8,10 +7,12 @@ from sklearn.model_selection import train_test_split
 
 import torch
 from torch.utils.data import Dataset
+import torch.nn.functional as F
 
 from fastai.vision import (rand_pad, flip_lr, ImageDataBunch, Learner, accuracy, Image)
 from dppy.finite_dpps import FiniteDPP
 
+sys.path.append('..')
 from model.model_alternative import AnotherConv
 from model.resnet import resnet_masked
 from dataloader.builder import build_dataset
@@ -33,7 +34,7 @@ step_size = 500
 steps = 20
 # methods = ['random', *DEFAULT_MASKS]
 # methods = ['random', 'AL_dpp', *DEFAULT_MASKS]
-methods = ['l_dpp_noisereg']
+methods = ['error_oracle', 'random']
 epochs_per_step = 3
 start_lr = 5e-4
 weight_decay = 0.2
@@ -109,6 +110,10 @@ def update_set(x_pool, x_train, y_pool, y_train, method='mcdue', model=None):
             dpp.sample_exact()
             idxs.update(dpp.list_of_samples[-1])
         idxs = list(idxs)[:step_size]
+    elif method == 'error_oracle':
+        predictions = F.softmax(model(images), dim=1).detach().cpu().numpy()
+        errors = -np.log(predictions[np.arange(len(predictions)),  y_pool])
+        idxs = np.argsort(errors)[::-1][:step_size]
     else:
         mask = build_mask(method)
         estimator = BaldMasked(model, dropout_mask=mask, num_classes=10, nn_runs=nn_runs)
