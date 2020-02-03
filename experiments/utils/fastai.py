@@ -35,7 +35,7 @@ class Inferencer:
         self.model.eval()
         for batch in DataLoader(TensorDataset(x), batch_size=self.batch_size):
             batch = batch[0].cuda()
-            prediction = self.model(batch, dropout_rate=dropout_rate, dropout_mask=dropout_mask).cpu()
+            prediction = self.model(batch, dropout_rate=dropout_rate, dropout_mask=dropout_mask).detach().cpu() #.numpy()
 
             predictions.append(prediction)
 
