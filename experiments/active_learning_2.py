@@ -3,7 +3,6 @@ import sys
 sys.path.append('..')
 
 import torch
-from torch.utils.data import Dataset
 from sklearn.model_selection import train_test_split
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,7 +15,8 @@ from model.resnet import resnet_masked
 from model.model_alternative import AnotherConv
 from dataloader.builder import build_dataset
 from uncertainty_estimator.bald import Bald, BaldMasked
-from uncertainty_estimator.masks import build_masks, build_mask
+from uncertainty_estimator.masks import build_masks, build_mask, DEFAULT_MASKS
+from experiments.utils.fastai import ImageArrayDS, Inferencer
 
 
 # plt.switch_backend('Qt4Agg')  # to work with remote server
@@ -25,7 +25,7 @@ torch.backends.cudnn.benchmark = True
 
 
 total_size = 60_000
-val_size = 20_000
+val_size = 50_0
 start_size = 5_000
 step_size = 500
 steps = 20
@@ -33,27 +33,8 @@ retrain = False
 nn_runs = 100
 
 
-class ImageArrayDS(Dataset):
-    def __init__(self, images, labels, tfms=None):
-        self.images = torch.FloatTensor(images)
-        self.labels = torch.LongTensor(labels)
-        self.tfms = tfms
-
-    def __getitem__(self, idx):
-        image = Image(self.images[idx])
-        if self.tfms is not None:
-            image = image.apply_tfms(self.tfms)
-        return image, self.labels[idx]
-
-    def __len__(self):
-        return len(self.images)
-
-    def get_state(self):
-        pass
-
-
 # Load data
-dataset = build_dataset('cifar_10', val_size=10_000)
+dataset = build_dataset('cifar_10', val_size=val_size)
 x_set, y_set = dataset.dataset('train')
 x_val, y_val = dataset.dataset('val')
 
@@ -85,17 +66,12 @@ else:
     model.load_state_dict(torch.load(model_path))
 
 
-images = torch.FloatTensor(x_val).to('cuda')
+images = torch.FloatTensor(x_val)# .to('cuda')
+inferencer = Inferencer(model)
 
-import time
-
-t0 = time.time()
-
-mask = build_mask('l_dpp', max_batch_coef=20)
-estimator = BaldMasked(model, dropout_mask=mask, num_classes=10, keep_runs=True, nn_runs=nn_runs)
+mask = build_mask('l_dpp')
+estimator = BaldMasked(inferencer, dropout_mask=mask, num_classes=10, keep_runs=True, nn_runs=nn_runs)
 estimations = estimator.estimate(images)
-
-print(time.time() - t0)
 
 
 

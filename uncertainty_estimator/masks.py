@@ -152,7 +152,7 @@ class DecorrelationMask:
 
 
 class DPPMask:
-    def __init__(self, noise=False, likelihood=False, ht_norm=False, noise_level=1e-4, max_batch_coef=4):
+    def __init__(self, noise=False, likelihood=False, ht_norm=False, noise_level=1e-4):
         self.layer_correlations = {}
         self.dpps = {}
         self.norm = {}
@@ -166,15 +166,11 @@ class DPPMask:
         # Flag for uncertainty estimator to make first run without taking the result
         self.dry_run = True
         self.layer_runs = defaultdict(list)
-        self.max_batch_coef = max_batch_coef
 
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         if layer_num not in self.layer_correlations:
             # warm-up, generatign correlations masks
             x_matrix = x.cpu().numpy()
-
-            if x_matrix.shape[0] > x_matrix.shape[1] * self.max_batch_coef:
-                x_matrix = x_matrix[:x_matrix.shape[1] * self.max_batch_coef]
 
             print(x_matrix.shape)
 
@@ -207,12 +203,8 @@ class DPPMask:
 
         # sampling nodes ids
         dpp = self.dpps[layer_num]
-        # dpp.sample_exact()
-        # dpp.sample_exact()
-        dpp.sample_mcmc('E')
-        ids = dpp.list_of_samples[0][-1]
-
-        # import ipdb; ipdb.set_trace()
+        dpp.sample_exact()
+        ids = dpp.list_of_samples[-1]
 
         mask_len = x.data.size()[-1]
         mask = x.data.new(mask_len).fill_(0)
@@ -228,14 +220,13 @@ class DPPMask:
 
 
 class DPPRankMask:
-    def __init__(self, likelihood=False, max_batch_coef=4):
+    def __init__(self, likelihood=False):
         self.layer_correlations = {}
         self.dry_run = True
         self.dpps = {}
         self.likelihood = likelihood
         self.ranks = {}
         self.ranks_history = defaultdict(list)
-        self.max_batch_coef = max_batch_coef
 
     def _rank(self, dpp):
         N = dpp.eig_vecs.shape[0]
@@ -246,9 +237,6 @@ class DPPRankMask:
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         if layer_num not in self.layer_correlations:
             x_matrix = x.cpu().numpy()
-
-            if x_matrix.shape[0] > x_matrix.shape[1] * self.max_batch_coef:
-                x_matrix = x_matrix[:x_matrix.shape[1] * self.max_batch_coef]
 
             correlations = np.abs(np.corrcoef(x_matrix.T))
 

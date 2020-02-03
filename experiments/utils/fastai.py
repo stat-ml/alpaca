@@ -1,8 +1,7 @@
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, TensorDataset, DataLoader
 import fastai
 from fastai.vision import Image
-
 
 # For fastai pbar work in notebooks in vscode and pycharm
 from fastprogress.fastprogress import force_console_behavior
@@ -24,3 +23,24 @@ class ImageArrayDS(Dataset):
 
     def __len__(self):
         return len(self.images)
+
+
+class Inferencer:
+    def __init__(self, model, batch_size=8192):
+        self.model = model
+        self.batch_size = batch_size
+
+    def __call__(self, x, dropout_rate=0.5, dropout_mask=None):
+        predictions = []
+        self.model.eval()
+        for batch in DataLoader(TensorDataset(x), batch_size=self.batch_size):
+            batch = batch[0].cuda()
+            prediction = self.model(batch, dropout_rate=dropout_rate, dropout_mask=dropout_mask).cpu()
+
+            predictions.append(prediction)
+
+        return torch.cat(predictions)
+
+    def train(self):
+        pass
+
