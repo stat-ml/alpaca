@@ -25,7 +25,7 @@ torch.backends.cudnn.benchmark = True
 
 
 total_size = 60_000
-val_size = 10_000
+val_size = 20_000
 start_size = 5_000
 step_size = 500
 steps = 20
@@ -85,25 +85,29 @@ else:
     model.load_state_dict(torch.load(model_path))
 
 
-images = torch.FloatTensor(x_val[:20]).to('cuda')
+images = torch.FloatTensor(x_val).to('cuda')
 
-print(np.argmax(model(images).detach().cpu().numpy(), axis=1))
-print(y_val[:20])
+import time
 
+t0 = time.time()
 
-step_size = 10
-mask = build_mask('basic_bern')
+mask = build_mask('l_dpp', max_batch_coef=20)
 estimator = BaldMasked(model, dropout_mask=mask, num_classes=10, keep_runs=True, nn_runs=nn_runs)
 estimations = estimator.estimate(images)
-mcd = estimator.last_mcd_runs().reshape(20, nn_runs*10)
-dpp = FiniteDPP('likelihood', L=np.corrcoef(mcd))
-idxs = set()
-while len(idxs) < step_size:
-    dpp.sample_exact()
-    idxs.update(dpp.list_of_samples[-1])
-idxs = list(idxs)[:step_size]
 
-# idxs = np.argsort(estimations)[::-1]
-print(idxs)
-print(estimations[idxs])
+print(time.time() - t0)
+
+
+
+# mcd = estimator.last_mcd_runs().reshape(20, nn_runs*10)
+# dpp = FiniteDPP('likelihood', L=np.corrcoef(mcd))
+# idxs = set()
+# while len(idxs) < step_size:
+#     dpp.sample_exact()
+#     idxs.update(dpp.list_of_samples[-1])
+# idxs = list(idxs)[:step_size]
+#
+# # idxs = np.argsort(estimations)[::-1]
+# print(idxs)
+# print(estimations[idxs])
 

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 import torch.nn.functional as F
 
 from fastai.vision import (rand_pad, flip_lr, ImageDataBunch, Learner, accuracy, Image)
@@ -29,13 +29,13 @@ torch.backends.cudnn.benchmark = True
 # Settings
 val_size = 10_000
 pool_size = 10_000
-start_size = 2_000
-step_size = 500
+start_size = 4_000
+step_size = 2000
 steps = 20
 # methods = ['random', *DEFAULT_MASKS]
 # methods = ['random', 'AL_dpp', *DEFAULT_MASKS]
 # methods = ['error_oracle', 'random']
-methods = ["stoch_oracle", "random"]
+methods = ["error_oracle", "stoch_oracle", "random"]
 epochs_per_step = 3
 start_lr = 5e-4
 weight_decay = 0.2
@@ -57,7 +57,8 @@ def main():
 
     # Start data split
     x_set, x_train_init, y_set, y_train_init = train_test_split(x_set, y_set, test_size=start_size, stratify=y_set)
-    _, x_pool_init, _, y_pool_init = train_test_split(x_set, y_set, test_size=pool_size, stratify=y_set)
+    # _, x_pool_init, _, y_pool_init = train_test_split(x_set, y_set, test_size=pool_size, stratify=y_set)
+    x_pool_init, y_pool_init = x_set, y_set
     train_tfms = [*rand_pad(4, 32), flip_lr(p=0.5)]  # Transformation to augment images
 
     loss_func = torch.nn.CrossEntropyLoss()
@@ -90,7 +91,6 @@ def main():
     # Display results
     plot_metric(val_accuracy)
 
-
 def update_set(x_pool, x_train, y_pool, y_train, method='mcdue', model=None):
     images = torch.FloatTensor(x_pool).to('cuda')
 
@@ -112,6 +112,8 @@ def update_set(x_pool, x_train, y_pool, y_train, method='mcdue', model=None):
             idxs.update(dpp.list_of_samples[-1])
         idxs = list(idxs)[:step_size]
     elif method == 'error_oracle':
+        # pool_dl = ImageArrayDS(x_train, y_train)
+
         predictions = F.softmax(model(images), dim=1).detach().cpu().numpy()
         errors = -np.log(predictions[np.arange(len(predictions)),  y_pool])
         idxs = np.argsort(errors)[::-1][:step_size]
