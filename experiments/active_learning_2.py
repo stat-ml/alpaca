@@ -11,7 +11,7 @@ from fastai.vision import rand_pad, flip_lr, ImageDataBunch, Learner, accuracy, 
 from fastai.vision import models
 from dppy.finite_dpps import FiniteDPP
 
-from model.resnet import resnet_masked
+from model.resnet import resnet_masked, resnet_linear
 from model.model_alternative import AnotherConv
 from dataloader.builder import build_dataset
 from uncertainty_estimator.bald import Bald, BaldMasked
@@ -29,7 +29,7 @@ val_size = 50_0
 start_size = 5_000
 step_size = 500
 steps = 20
-retrain = False
+retrain = True
 nn_runs = 100
 
 
@@ -54,8 +54,9 @@ data = ImageDataBunch.create(train_ds, val_ds, bs=256)
 loss_func = torch.nn.CrossEntropyLoss()
 
 
-model = AnotherConv()
+# model = AnotherConv()
 # model = resnet_masked(pretrained=True)
+model = resnet_linear(pretrained=True, dropout_rate=0.5)
 learner = Learner(data, model, metrics=accuracy, loss_func=loss_func)
 
 model_path = "experiments/data/model.pt"

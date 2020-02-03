@@ -1,5 +1,6 @@
 import sys
 from collections import defaultdict
+from functools import partial
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,6 +11,7 @@ from torch.utils.data import Dataset, DataLoader
 import torch.nn.functional as F
 
 from fastai.vision import (rand_pad, flip_lr, ImageDataBunch, Learner, accuracy, Image)
+from fastai.callbacks import EarlyStoppingCallback
 from dppy.finite_dpps import FiniteDPP
 
 sys.path.append('..')
@@ -22,18 +24,20 @@ from experiments.utils.fastai import ImageArrayDS, Inferencer
 
 
 # plt.switch_backend('Qt4Agg')  # to plot over ssh
-torch.cuda.set_device(1)
+# torch.cuda.set_device(1)
 torch.backends.cudnn.benchmark = True
 
 
 # Settings
 val_size = 10_000
-pool_size = 45_000
-start_size = 4_000
-step_size = 2_000
-steps = 15
-methods = ["error_oracle", "stoch_oracle", "random", *DEFAULT_MASKS, 'AL_dpp']
-epochs_per_step = 3
+pool_size = 10_000
+start_size = 2_000
+step_size = 500
+steps = 8
+# methods = ["error_oracle", "stoch_oracle", "random", *DEFAULT_MASKS, 'AL_dpp']
+methods = ["error_oracle", "random", 'l_dpp', 'AL_dpp']
+epochs_per_step = 30
+patience = 2
 start_lr = 5e-4
 weight_decay = 0.2
 batch_size = 256
@@ -77,7 +81,8 @@ def main():
                 val_ds = ImageArrayDS(x_val, y_val)
                 data = ImageDataBunch.create(train_ds, val_ds, bs=batch_size)
 
-                learner = Learner(data, model, metrics=accuracy, loss_func=loss_func)
+                callbacks = [partial(EarlyStoppingCallback, min_delta=1e-3, patience=patience)]
+                learner = Learner(data, model, metrics=accuracy, loss_func=loss_func, callback_fns=callbacks)
                 learner.fit(epochs_per_step, start_lr, wd=weight_decay)
 
                 if i != steps - 1:
