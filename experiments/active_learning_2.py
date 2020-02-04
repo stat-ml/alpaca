@@ -69,6 +69,13 @@ else:
 
 
 
+'Ok, lets make it'
+
+
+
+
+
+
 # images = torch.FloatTensor(x_val)# .to('cuda')
 # inferencer = Inferencer(model)
 
