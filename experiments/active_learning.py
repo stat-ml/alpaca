@@ -15,7 +15,7 @@ from fastai.callbacks import EarlyStoppingCallback
 from dppy.finite_dpps import FiniteDPP
 
 sys.path.append('..')
-from model.model_alternative import AnotherConv
+from model.cnn import AnotherConv
 from model.resnet import resnet_masked
 from dataloader.builder import build_dataset
 from uncertainty_estimator.bald import Bald, BaldMasked

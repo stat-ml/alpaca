@@ -12,7 +12,7 @@ from fastai.vision import models
 from dppy.finite_dpps import FiniteDPP
 
 from model.resnet import resnet_masked, resnet_linear
-from model.model_alternative import AnotherConv
+from model.cnn import AnotherConv
 from dataloader.builder import build_dataset
 from uncertainty_estimator.bald import Bald, BaldMasked
 from uncertainty_estimator.masks import build_masks, build_mask, DEFAULT_MASKS
