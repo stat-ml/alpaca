@@ -25,7 +25,7 @@ torch.backends.cudnn.benchmark = True
 
 
 total_size = 60_000
-val_size = 50_0
+val_size = 10_000
 start_size = 5_000
 step_size = 500
 steps = 20
@@ -56,23 +56,25 @@ loss_func = torch.nn.CrossEntropyLoss()
 
 # model = AnotherConv()
 # model = resnet_masked(pretrained=True)
-model = resnet_linear(pretrained=True, dropout_rate=0.5)
+model = resnet_linear(pretrained=True, dropout_rate=0.5, freeze=False)
 learner = Learner(data, model, metrics=accuracy, loss_func=loss_func)
 
 model_path = "experiments/data/model.pt"
 if retrain or not os.path.exists(model_path):
-    learner.fit(10, 5e-4, wd=0.2)
+    learner.fit(10, 1e-2, wd=0.02)
     torch.save(model.state_dict(), model_path)
 else:
     model.load_state_dict(torch.load(model_path))
 
 
-images = torch.FloatTensor(x_val)# .to('cuda')
-inferencer = Inferencer(model)
 
-mask = build_mask('l_dpp')
-estimator = BaldMasked(inferencer, dropout_mask=mask, num_classes=10, keep_runs=True, nn_runs=nn_runs)
-estimations = estimator.estimate(images)
+
+# images = torch.FloatTensor(x_val)# .to('cuda')
+# inferencer = Inferencer(model)
+
+# mask = build_mask('l_dpp')
+# estimator = BaldMasked(inferencer, dropout_mask=mask, num_classes=10, keep_runs=True, nn_runs=nn_runs)
+# estimations = estimator.estimate(images)
 
 
 

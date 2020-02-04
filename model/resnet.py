@@ -60,12 +60,16 @@ class ResNetLinear(ResNet):
         return x
 
 
-def resnet_linear(pretrained=False, dropout_rate=0.5):
+def resnet_linear(pretrained=False, dropout_rate=0.5, freeze=False):
     base = resnet18(pretrained=pretrained, mode='linear')
     base.dropout_rate = dropout_rate
     base.fc = nn.Linear(512, 512)
     base.fc2 = nn.Linear(512, 256)
     base.fc3 = nn.Linear(256, 10)
+
+    if freeze:
+        for param in list(base.parameters())[:-8]:
+            param.requires_grad = False
 
     return base
 

@@ -16,7 +16,7 @@ from dppy.finite_dpps import FiniteDPP
 
 sys.path.append('..')
 from model.model_alternative import AnotherConv
-from model.resnet import resnet_masked
+from model.resnet import resnet_masked, resnet_linear
 from dataloader.builder import build_dataset
 from uncertainty_estimator.bald import Bald, BaldMasked
 from uncertainty_estimator.masks import build_mask, DEFAULT_MASKS
@@ -24,7 +24,7 @@ from experiments.utils.fastai import ImageArrayDS, Inferencer
 
 
 # plt.switch_backend('Qt4Agg')  # to plot over ssh
-# torch.cuda.set_device(1)
+torch.cuda.set_device(1)
 torch.backends.cudnn.benchmark = True
 
 
@@ -34,15 +34,17 @@ pool_size = 45_000
 start_size = 4_000
 step_size = 2000
 steps = 20
-methods = ["error_oracle", "stoch_oracle", "random", *DEFAULT_MASKS]
+# methods = ["error_oracle", "stoch_oracle", "random", *DEFAULT_MASKS, 'AL_dpp']
 # methods = ["error_oracle", "random", 'l_dpp', 'AL_dpp']
+methods = ['AL_dpp']
 epochs_per_step = 30
 patience = 2
 start_lr = 5e-4
 weight_decay = 0.2
 batch_size = 256
 nn_runs = 100
-model_type = 'resnet'
+model_type = 'resnet_linear'
+# model_type = 'resnet'
 # model_type = 'conv'
 
 
@@ -157,6 +159,8 @@ def build_model(model_type):
         model = AnotherConv()
     elif model_type == 'resnet':
         model = resnet_masked(pretrained=True)
+    elif model_type == 'resnet_linear':
+        model = resnet_linear(pretrained=True, dropout_rate=0.5)
     return model
 
 
