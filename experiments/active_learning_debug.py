@@ -3,7 +3,6 @@ import sys
 sys.path.append('..')
 
 import torch
-from torch.utils.data import Dataset
 from sklearn.model_selection import train_test_split
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,11 +11,12 @@ from fastai.vision import rand_pad, flip_lr, ImageDataBunch, Learner, accuracy, 
 from fastai.vision import models
 from dppy.finite_dpps import FiniteDPP
 
-from model.resnet import resnet_masked
-from model.model_alternative import AnotherConv
+from model.resnet import resnet_masked, resnet_linear
+from model.cnn import AnotherConv
 from dataloader.builder import build_dataset
 from uncertainty_estimator.bald import Bald, BaldMasked
-from uncertainty_estimator.masks import build_masks, build_mask
+from uncertainty_estimator.masks import build_masks, build_mask, DEFAULT_MASKS
+from experiments.utils.fastai import ImageArrayDS, Inferencer
 
 
 # plt.switch_backend('Qt4Agg')  # to work with remote server
@@ -29,31 +29,12 @@ val_size = 10_000
 start_size = 5_000
 step_size = 500
 steps = 20
-retrain = False
+reload = True
 nn_runs = 100
 
 
-class ImageArrayDS(Dataset):
-    def __init__(self, images, labels, tfms=None):
-        self.images = torch.FloatTensor(images)
-        self.labels = torch.LongTensor(labels)
-        self.tfms = tfms
-
-    def __getitem__(self, idx):
-        image = Image(self.images[idx])
-        if self.tfms is not None:
-            image = image.apply_tfms(self.tfms)
-        return image, self.labels[idx]
-
-    def __len__(self):
-        return len(self.images)
-
-    def get_state(self):
-        pass
-
-
 # Load data
-dataset = build_dataset('cifar_10', val_size=10_000)
+dataset = build_dataset('cifar_10', val_size=val_size)
 x_set, y_set = dataset.dataset('train')
 x_val, y_val = dataset.dataset('val')
 
@@ -75,35 +56,33 @@ loss_func = torch.nn.CrossEntropyLoss()
 
 model = AnotherConv()
 # model = resnet_masked(pretrained=True)
+# model = resnet_linear(pretrained=True, dropout_rate=0.5, freeze=False)
 learner = Learner(data, model, metrics=accuracy, loss_func=loss_func)
 
 model_path = "experiments/data/model.pt"
-if retrain or not os.path.exists(model_path):
-    learner.fit(10, 5e-4, wd=0.2)
-    torch.save(model.state_dict(), model_path)
-else:
+if reload and os.path.exists(model_path):
     model.load_state_dict(torch.load(model_path))
+else:
+    learner.fit(10, 1e-3, wd=0.02)
+    torch.save(model.state_dict(), model_path)
 
 
-images = torch.FloatTensor(x_val[:20]).to('cuda')
+images = torch.FloatTensor(x_val)# .to('cuda')
+inferencer = Inferencer(model)
 
-print(np.argmax(model(images).detach().cpu().numpy(), axis=1))
-print(y_val[:20])
-
-
-step_size = 10
-mask = build_mask('basic_bern')
-estimator = BaldMasked(model, dropout_mask=mask, num_classes=10, keep_runs=True, nn_runs=nn_runs)
+mask = build_mask('rank_l_dpp')
+estimator = BaldMasked(inferencer, dropout_mask=mask, num_classes=10, nn_runs=nn_runs)
 estimations = estimator.estimate(images)
-mcd = estimator.last_mcd_runs().reshape(20, nn_runs*10)
-dpp = FiniteDPP('likelihood', L=np.corrcoef(mcd))
-idxs = set()
-while len(idxs) < step_size:
-    dpp.sample_exact()
-    idxs.update(dpp.list_of_samples[-1])
-idxs = list(idxs)[:step_size]
 
-# idxs = np.argsort(estimations)[::-1]
-print(idxs)
-print(estimations[idxs])
 
+# mcd = estimator.last_mcd_runs().reshape(20, nn_runs*10)
+# dpp = FiniteDPP('likelihood', L=np.corrcoef(mcd))
+# idxs = set()
+# while len(idxs) < step_size:
+#     dpp.sample_exact()
+#     idxs.update(dpp.list_of_samples[-1])
+# idxs = list(idxs)[:step_size]
+#
+# # idxs = np.argsort(estimations)[::-1]
+# print(idxs)
+# print(estimations[idxs])

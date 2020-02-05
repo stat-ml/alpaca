@@ -22,6 +22,7 @@ class BaseMLP(nn.Module):
         self.activation = activation
         self.double()
         self.to(self.device)
+        self.activation = F.elu
 
     def forward(self, x, dropout_rate=0, train=False, dropout_mask=None):
         out = torch.DoubleTensor(x).to(self.device) if isinstance(x, np.ndarray) else x

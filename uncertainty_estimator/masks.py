@@ -16,7 +16,7 @@ DPP_MASKS = [
     'l_dpp', 'rank_l_dpp', 'l_dpp_noisereg', 'l_dpp_htnorm', 'l_dpp_htnorm_noisereg']
 
 
-def build_masks(names=None, nn_runs=100):
+def build_masks(names=None, nn_runs=100, **kwargs):
     masks = {
         'vanilla': None,
         'basic_mask': BasicMask(),
@@ -26,15 +26,15 @@ def build_masks(names=None, nn_runs=100):
         'mirror_random': MirrorMask(),
         'decorrelating': DecorrelationMask(),
         'decorrelating_sc': DecorrelationMask(scaling=True, dry_run=False),
-        'dpp': DPPMask(),
-        'rank_dpp': DPPRankMask(),
-        'rank_l_dpp': DPPRankMask(likelihood=True),
-        'dpp_noisereg': DPPMask(noise=True),
-        'l_dpp': DPPMask(likelihood=True),
-        'l_dpp_noisereg': DPPMask(noise=True, likelihood=True),
-        'l_dpp_htnorm': DPPMask(likelihood=True, ht_norm=True),
-        'l_dpp_htnorm_noisereg': DPPMask(noise=True, likelihood=True, ht_norm=True),
-        'dpp_htnorm': DPPMask(ht_norm=True)
+        'dpp': DPPMask(**kwargs),
+        'rank_dpp': DPPRankMask(**kwargs),
+        'rank_l_dpp': DPPRankMask(likelihood=True, **kwargs),
+        'dpp_noisereg': DPPMask(noise=True, **kwargs),
+        'l_dpp': DPPMask(likelihood=True, **kwargs),
+        'l_dpp_noisereg': DPPMask(noise=True, likelihood=True, **kwargs),
+        'l_dpp_htnorm': DPPMask(likelihood=True, ht_norm=True, **kwargs),
+        'l_dpp_htnorm_noisereg': DPPMask(noise=True, likelihood=True, ht_norm=True, **kwargs),
+        'dpp_htnorm': DPPMask(ht_norm=True, **kwargs)
     }
     if names is None:
         return masks
@@ -42,8 +42,8 @@ def build_masks(names=None, nn_runs=100):
 
 
 # Utility function for prototype. Better to use build_masks if you need many of them
-def build_mask(name):
-    return build_masks([name])[name]
+def build_mask(name, **kwargs):
+    return build_masks([name], **kwargs)[name]
 
 
 class BasicMask:
@@ -236,8 +236,7 @@ class DPPRankMask:
         if layer_num not in self.layer_correlations:
             x_matrix = x.cpu().numpy()
 
-            x_matrix = x_matrix
-            correlations = np.abs(np.corrcoef(x_matrix.T))
+            correlations = np.corrcoef(x_matrix.T)
 
             self.layer_correlations[layer_num] = correlations
             if self.likelihood:
@@ -252,6 +251,7 @@ class DPPRankMask:
         mask = x.data.new(x.data.size()[-1]).fill_(0)
         k = int(self.ranks[layer_num] * (1 - dropout_rate))
         self.dpps[layer_num].sample_exact_k_dpp(k)
+
         ids = self.dpps[layer_num].list_of_samples[-1]
 
         mask[ids] = 1 / (1 - dropout_rate + 1e-10)
