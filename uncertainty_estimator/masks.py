@@ -172,8 +172,6 @@ class DPPMask:
             # warm-up, generatign correlations masks
             x_matrix = x.cpu().numpy()
 
-            print(x_matrix.shape)
-
             self.x_matrix = x_matrix
 
             correlations = np.corrcoef(x_matrix.T)

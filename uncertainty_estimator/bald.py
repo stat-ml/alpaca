@@ -29,7 +29,7 @@ class BaldMasked:
     """
     Estimate uncertainty for samples with MCDUE approach
     """
-    def __init__(self, net, nn_runs=25, dropout_mask=None, dropout_rate=.5, num_classes=1, keep_runs=False):
+    def __init__(self, net, nn_runs=100, dropout_mask=None, dropout_rate=.5, num_classes=2, keep_runs=False):
         self.net = net
         self.nn_runs = nn_runs
         self.num_classes = num_classes
@@ -42,7 +42,7 @@ class BaldMasked:
         mcd_runs = np.zeros((X_pool.shape[0], self.nn_runs, self.num_classes))
 
         with torch.no_grad():
-            self.net.train()  # we need this for vanilla dropout mask
+            self.net.eval()
             # Some mask needs first run without dropout, i.e. decorrelation mask
             if hasattr(self.dropout_mask, 'dry_run') and self.dropout_mask.dry_run:
                 self.net(X_pool, dropout_rate=self.dropout_rate, dropout_mask=self.dropout_mask)

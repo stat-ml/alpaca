@@ -112,7 +112,7 @@ class MediumConv(nn.Module):
 class AnotherConv(nn.Module):
     def __init__(self, num_classes=10, activation=None):
         if activation is None:
-            self.activation = F.elu
+            self.activation = F.celu
         else:
             self.activation = activation
         super().__init__()

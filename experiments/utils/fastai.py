@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from torch.utils.data import Dataset, TensorDataset, DataLoader
 import fastai
@@ -33,6 +34,10 @@ class Inferencer:
     def __call__(self, x, dropout_rate=0.5, dropout_mask=None):
         predictions = []
         self.model.eval()
+
+        if isinstance(x, np.ndarray):
+            x = torch.Tensor(x)
+
         for batch in DataLoader(TensorDataset(x), batch_size=self.batch_size):
             batch = batch[0].cuda()
             prediction = self.model(batch, dropout_rate=dropout_rate, dropout_mask=dropout_mask).detach().cpu() #.numpy()
@@ -42,5 +47,8 @@ class Inferencer:
         return torch.cat(predictions)
 
     def train(self):
-        pass
+        self.model.train()
+
+    def eval(self):
+        self.model.eval()
 
