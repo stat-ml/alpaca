@@ -7,8 +7,7 @@ from dataloader.custom_dataset import loader
 
 
 class BaseMLP(nn.Module):
-    def __init__(self, layer_sizes, postprocessing=lambda x: x,
-                activation = F.leaky_relu):
+    def __init__(self, layer_sizes, activation, postprocessing=lambda x: x):
         super(BaseMLP, self).__init__()
 
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -26,7 +25,7 @@ class BaseMLP(nn.Module):
 
     def forward(self, x, dropout_rate=0, train=False, dropout_mask=None):
         out = torch.DoubleTensor(x).to(self.device) if isinstance(x, np.ndarray) else x
-        out = F.leaky_relu(self.fcs[0](out))
+        out = self.activation(self.fcs[0](out))
 
         for layer_num, fc in enumerate(self.fcs[1:-1]):
             out = self.activation(fc(out))
@@ -98,11 +97,14 @@ class BaseMLP(nn.Module):
 
 class MLP(BaseMLP):
     def __init__(self, layer_sizes, l2_reg=1e-5, postprocessing=None, loss=nn.MSELoss,
-                 optimizer=None, activation = F.leaky_relu):
+                 optimizer=None, activation=None):
         if postprocessing is None:
             postprocessing = lambda x: x
 
-        super(MLP, self).__init__(layer_sizes, postprocessing, activation)
+        if activation is None:
+            activation = F.celu
+
+        super(MLP, self).__init__(layer_sizes, activation=activation, postprocessing=postprocessing)
 
         self.criterion = loss()
 
