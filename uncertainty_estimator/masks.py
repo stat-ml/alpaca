@@ -7,7 +7,7 @@ from scipy.special import softmax
 from dppy.finite_dpps import FiniteDPP
 
 
-DEFAULT_MASKS = ['basic_bern', 'decorrelating_sc', 'dpp', 'k_dpp']
+DEFAULT_MASKS = ['basic_bern', 'decorrelating_sc', 'dpp', 'k_dpp', 'k_dpp_noisereg']
 
 
 # It's better to use this function to get the mask then call them directly
