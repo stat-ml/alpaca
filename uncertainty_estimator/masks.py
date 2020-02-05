@@ -16,8 +16,9 @@ def build_masks(names=None, **kwargs):
         'basic_bern': BasicBernoulliMask(),
         'decorrelating': DecorrelationMask(),
         'decorrelating_sc': DecorrelationMask(scaling=True, dry_run=False),
-        'k_dpp': KDPPMask(),
         'dpp': DPPMask(),
+        'k_dpp': KDPPMask(),
+        'k_dpp_noisereg': KDPPMask(noise_level=kwargs.get('noise_level', 1e-2))
     }
     if names is None:
         return masks
@@ -117,12 +118,13 @@ class DPPMask:
 
 
 class KDPPMask:
-    def __init__(self):
+    def __init__(self, noise_level=None):
         self.layer_correlations = {}
         self.dry_run = True
         self.dpps = {}
         self.ranks = {}
         self.ranks_history = defaultdict(list)
+        self.noise_level = noise_level
 
     def _rank(self, dpp):
         N = dpp.eig_vecs.shape[0]
@@ -135,12 +137,15 @@ class KDPPMask:
             x_matrix = x.cpu().numpy()
 
             correlations = np.corrcoef(x_matrix.T)
+            if self.noise_level is not None:
+                correlations += self.noise_level * np.eye(len(correlations))
             self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': correlations})
             self.dpps[layer_num].sample_exact_k_dpp(1)  # to trigger eig values generation
             self.ranks[layer_num] = self._rank(self.dpps[layer_num])
 
             # Keep data for debugging
             self.ranks_history[layer_num].append(self.ranks[layer_num])
+            print(self.ranks_history)
             self.layer_correlations[layer_num] = correlations
 
             return x.data.new(x.data.size()[-1]).fill_(1)

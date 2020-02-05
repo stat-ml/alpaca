@@ -96,16 +96,16 @@ def main():
     # Display results
     plot_metric(val_accuracy)
 
-def update_set(x_pool, x_train, y_pool, y_train, method='mcdue', model=None):
+def update_set(x_pool, x_train, y_pool, y_train, method='mcdue', model=None, step=step_size):
     images = torch.FloatTensor(x_pool)
     inferencer = Inferencer(model)
 
     if method == 'random':
-        idxs = range(step_size)
+        idxs = range(step)
     elif method == 'mcdue':
         estimator = Bald(inferencer, num_classes=10, nn_runs=nn_runs)
         estimations = estimator.estimate(images)
-        idxs = np.argsort(estimations)[::-1][:step_size]  # Select most uncertain
+        idxs = np.argsort(estimations)[::-1][:step]  # Select most uncertain
     elif method == 'AL_dpp':
         mask = build_mask('basic_bern')
         estimator = BaldMasked(inferencer, dropout_mask=mask, num_classes=10, keep_runs=True, nn_runs=nn_runs)
@@ -113,23 +113,23 @@ def update_set(x_pool, x_train, y_pool, y_train, method='mcdue', model=None):
         mcd = estimator.last_mcd_runs().reshape(-1, nn_runs * 10)
         dpp = FiniteDPP('likelihood', **{'L': np.corrcoef(mcd)})
         idxs = set()
-        while len(idxs) < step_size:
+        while len(idxs) < step:
             dpp.sample_exact()
             idxs.update(dpp.list_of_samples[-1])
-        idxs = list(idxs)[:step_size]
+        idxs = list(idxs)[:step]
     elif method == 'error_oracle':
         predictions = F.softmax(inferencer(images), dim=1).detach().cpu().numpy()
         errors = -np.log(predictions[np.arange(len(predictions)),  y_pool])
-        idxs = np.argsort(errors)[::-1][:step_size]
+        idxs = np.argsort(errors)[::-1][:step]
     elif method == 'stoch_oracle':
         predictions = F.softmax(inferencer(images), dim=1).detach().cpu().numpy()
         errors = -np.log(predictions[np.arange(len(predictions)), y_pool])
-        idxs = np.random.choice(len(predictions), step_size, replace=False, p=errors/sum(errors))
+        idxs = np.random.choice(len(predictions), step, replace=False, p=errors/sum(errors))
     else:
         mask = build_mask(method)
         estimator = BaldMasked(inferencer, dropout_mask=mask, num_classes=10, nn_runs=nn_runs)
         estimations = estimator.estimate(images)
-        idxs = np.argsort(estimations)[::-1][:step_size]
+        idxs = np.argsort(estimations)[::-1][:step]
         estimator.reset()
 
     x_add, y_add = np.copy(x_pool[idxs]), np.copy(y_pool[idxs])
