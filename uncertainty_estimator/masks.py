@@ -118,7 +118,7 @@ class DPPMask:
 
 
 class KDPPMask:
-    def __init__(self, noise_level=None, tol_level=1e-6):
+    def __init__(self, noise_level=None, tol_level=1e-7):
         self.layer_correlations = {}
         self.dry_run = True
         self.dpps = {}
@@ -152,6 +152,7 @@ class KDPPMask:
 
         mask = x.data.new(x.data.size()[-1]).fill_(0)
         k = int(self.ranks[layer_num] * (1 - dropout_rate))
+        print(layer_num)
         self.dpps[layer_num].sample_exact_k_dpp(k)
 
         ids = self.dpps[layer_num].list_of_samples[-1]
