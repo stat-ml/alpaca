@@ -1,7 +1,6 @@
 from collections import defaultdict
 
 import torch
-from pyDOE import lhs
 import numpy as np
 import numpy.linalg as la
 from scipy.special import softmax
@@ -11,23 +10,26 @@ from dppy.finite_dpps import FiniteDPP
 DEFAULT_MASKS = ['basic_bern', 'decorrelating_sc', 'dpp', 'k_dpp']
 
 
-def build_masks(names=None, nn_runs=100, **kwargs):
+# It's better to use this function to get the mask then call them directly
+def build_masks(names=None, **kwargs):
     masks = {
-        'basic_bern': BasicMaskBernoulli(),
+        'basic_bern': BasicBernoulliMask(),
         'decorrelating': DecorrelationMask(),
         'decorrelating_sc': DecorrelationMask(scaling=True, dry_run=False),
-        'k_dpp': DPPRankMask(likelihood=True, **kwargs),
-        'dpp': DPPMask(likelihood=True, **kwargs),
+        'k_dpp': KDPPMask(),
+        'dpp': DPPMask(),
     }
     if names is None:
         return masks
     return {name: masks[name] for name in names}
 
-# Utility function for prototype. Better to use build_masks if you need many of them
+
+# Build single mask
 def build_mask(name, **kwargs):
     return build_masks([name], **kwargs)[name]
 
-class BasicMaskBernoulli:
+
+class BasicBernoulliMask:
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         p = 1 - dropout_rate
 
@@ -81,20 +83,11 @@ class DecorrelationMask:
 
 
 class DPPMask:
-    def __init__(self, noise=False, likelihood=False, ht_norm=False, noise_level=1e-4):
-        self.layer_correlations = {}
+    def __init__(self):
         self.dpps = {}
-        self.norm = {}
-        self.drop_mask = True
-
-        self.noise = noise
-        self.noise_level = noise_level
-        self.likelihood = likelihood
-        self.ht_norm = ht_norm
-
+        self.layer_correlations = {}  # keep for debug purposes
         # Flag for uncertainty estimator to make first run without taking the result
         self.dry_run = True
-        self.layer_runs = defaultdict(list)
 
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         if layer_num not in self.layer_correlations:
@@ -102,31 +95,11 @@ class DPPMask:
             x_matrix = x.cpu().numpy()
 
             self.x_matrix = x_matrix
-
             correlations = np.corrcoef(x_matrix.T)
-
-            if self.noise:  # Add noise on diagonal to regularize
-                correlations = correlations + np.diag(np.ones(len(correlations))*self.noise_level)
-
-            if self.likelihood:
-                self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': correlations})
-            else:
-                self.dpps[layer_num] = FiniteDPP('correlation', **{'K': correlations})
-
+            self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': correlations})
             self.layer_correlations[layer_num] = correlations
 
-            if self.ht_norm:
-                K = x.data.new(correlations)
-                if self.likelihood:
-                    E = x.data.new(np.eye(len(correlations)))
-                    L = K
-                    K = torch.mm(L, torch.inverse(L + E))
-
-                self.norm[layer_num] = torch.reciprocal(torch.diag(K))  # / len(correlations)
-
             return x.data.new(x.data.size()[-1]).fill_(1)
-
-        self.layer_runs[layer_num].append(x.detach().cpu().numpy())
 
         # sampling nodes ids
         dpp = self.dpps[layer_num]
@@ -135,10 +108,7 @@ class DPPMask:
 
         mask_len = x.data.size()[-1]
         mask = x.data.new(mask_len).fill_(0)
-        if self.ht_norm:
-            mask[ids] = self.norm[layer_num][ids]
-        else:
-            mask[ids] = mask_len/len(ids)
+        mask[ids] = mask_len/len(ids)
 
         return x.data.new(mask)
 
@@ -146,12 +116,11 @@ class DPPMask:
         self.layer_correlations = {}
 
 
-class DPPRankMask:
-    def __init__(self, likelihood=False):
+class KDPPMask:
+    def __init__(self):
         self.layer_correlations = {}
         self.dry_run = True
         self.dpps = {}
-        self.likelihood = likelihood
         self.ranks = {}
         self.ranks_history = defaultdict(list)
 
@@ -166,15 +135,14 @@ class DPPRankMask:
             x_matrix = x.cpu().numpy()
 
             correlations = np.corrcoef(x_matrix.T)
-
-            self.layer_correlations[layer_num] = correlations
-            if self.likelihood:
-                self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': correlations})
-            else:
-                self.dpps[layer_num] = FiniteDPP('correlation', **{'K': correlations})
+            self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': correlations})
             self.dpps[layer_num].sample_exact_k_dpp(1)  # to trigger eig values generation
             self.ranks[layer_num] = self._rank(self.dpps[layer_num])
+
+            # Keep data for debugging
             self.ranks_history[layer_num].append(self.ranks[layer_num])
+            self.layer_correlations[layer_num] = correlations
+
             return x.data.new(x.data.size()[-1]).fill_(1)
 
         mask = x.data.new(x.data.size()[-1]).fill_(0)
