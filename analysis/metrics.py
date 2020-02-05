@@ -49,7 +49,7 @@ def uq_ndcg(errors, uq, bins=None):
     so we restructure errors to give top errors bigger relevance
     """
     if bins is None:
-        bins = [60, 80, 85, 90, 92, 95, 96, 97, 98, 99]
+        bins = [80, 95, 99]
 
     sorted_errors = sorted(errors)
     errors_percentiles = [percentileofscore(sorted_errors, error) for error in errors]

@@ -33,7 +33,6 @@ class ResNetMasked(ResNet):
         return x
 
 
-
 class ResNetLinear(ResNet):
     def forward(self, x, dropout_rate=0.5, dropout_mask=None):
         x = self.conv1(x)
