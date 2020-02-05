@@ -44,7 +44,10 @@ class Inferencer:
 
             predictions.append(prediction)
 
-        return torch.cat(predictions)
+        if predictions:
+            return torch.cat(predictions)
+        else:
+            return torch.Tensor([])
 
     def train(self):
         self.model.train()
