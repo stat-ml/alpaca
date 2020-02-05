@@ -8,54 +8,24 @@ from scipy.special import softmax
 from dppy.finite_dpps import FiniteDPP
 
 
-DEFAULT_MASKS = [
-    'basic_bern', 'decorrelating_sc', 'l_dpp', 'rank_l_dpp', 'l_dpp_htnorm', 'l_dpp_noisereg']
-BASIC_MASKS = ['vanilla', 'basic_mask', 'basic_bern', 'dpp', 'rank_dpp']
-DPP_MASKS = [
-    'basic_bern', 'dpp', 'rank_dpp', 'dpp_noisereg',
-    'l_dpp', 'rank_l_dpp', 'l_dpp_noisereg', 'l_dpp_htnorm', 'l_dpp_htnorm_noisereg']
+DEFAULT_MASKS = ['basic_bern', 'decorrelating_sc', 'dpp', 'k_dpp']
 
 
 def build_masks(names=None, nn_runs=100, **kwargs):
     masks = {
-        'vanilla': None,
-        'basic_mask': BasicMask(),
         'basic_bern': BasicMaskBernoulli(),
-        'lhs': LHSMask(nn_runs),
-        'lhs_shuffled': LHSMask(nn_runs, shuffle=True),
-        'mirror_random': MirrorMask(),
         'decorrelating': DecorrelationMask(),
         'decorrelating_sc': DecorrelationMask(scaling=True, dry_run=False),
-        'dpp': DPPMask(**kwargs),
-        'rank_dpp': DPPRankMask(**kwargs),
-        'rank_l_dpp': DPPRankMask(likelihood=True, **kwargs),
-        'dpp_noisereg': DPPMask(noise=True, **kwargs),
-        'l_dpp': DPPMask(likelihood=True, **kwargs),
-        'l_dpp_noisereg': DPPMask(noise=True, likelihood=True, **kwargs),
-        'l_dpp_htnorm': DPPMask(likelihood=True, ht_norm=True, **kwargs),
-        'l_dpp_htnorm_noisereg': DPPMask(noise=True, likelihood=True, ht_norm=True, **kwargs),
-        'dpp_htnorm': DPPMask(ht_norm=True, **kwargs)
+        'k_dpp': DPPRankMask(likelihood=True, **kwargs),
+        'dpp': DPPMask(likelihood=True, **kwargs),
     }
     if names is None:
         return masks
     return {name: masks[name] for name in names}
 
-
 # Utility function for prototype. Better to use build_masks if you need many of them
 def build_mask(name, **kwargs):
     return build_masks([name], **kwargs)[name]
-
-
-class BasicMask:
-    def __call__(self, x, dropout_rate=0.5, layer_num=0):
-        p = 1 - dropout_rate
-        mask = x.data.new(x.data.size()[-1]).fill_(0)
-        nonzero_count = round(len(mask)*p)
-        mask[np.random.permutation(len(mask))[:nonzero_count]] = 1
-        mask = mask * (len(mask)/(nonzero_count + 1e-10))
-
-        return mask
-
 
 class BasicMaskBernoulli:
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
@@ -74,50 +44,9 @@ class BasicMaskBernoulli:
         noise = noise.expand_as(x)
         return noise
 
-
     @staticmethod
     def _make_noise(input):
         return input.new().resize_as_(input)
-
-
-class LHSMask:
-    def __init__(self, nn_runs=25, shuffle=False):
-        self.nn_runs = nn_runs
-        self.layer_masks = {}
-        self.shuffle = shuffle
-
-    def __call__(self, x, dropout_rate=0.5, layer_num=0):
-        if layer_num not in self.layer_masks:
-            masks = lhs(n=x.shape[-1], samples=self.nn_runs)
-            if self.shuffle:
-                np.random.shuffle(masks)
-            self.layer_masks[layer_num] = iter(masks)
-        mask = next(self.layer_masks[layer_num])
-        mask = (mask > dropout_rate).astype('float') / (1-dropout_rate+1e-10)
-        return x.data.new(mask)
-
-    def reset(self):
-        self.layer_masks = {}
-
-
-class MirrorMask:
-    def __init__(self):
-        self.layer_masks = defaultdict(list)
-
-    def __call__(self, x, dropout_rate=0.5, layer_num=0):
-        if not self.layer_masks[layer_num]:
-            next_couple = self._generate_couple(x, dropout_rate)
-            self.layer_masks[layer_num].extend(next_couple)
-        return self.layer_masks[layer_num].pop()
-
-    def _generate_couple(self, x, dropout_rate):
-        p = 1 - dropout_rate
-        probability_tensor = x.data.new(x.data.size()[-1]).fill_(p)
-        mask_1 = torch.bernoulli(probability_tensor)
-        mask_2 = (x.data.new(x.data.size()[-1]).fill_(1) - mask_1) / (1 - p + 1e-10)
-        mask_1 = mask_1 / (p + 1e-10)
-
-        return [mask_1, mask_2]
 
 
 class DecorrelationMask:
