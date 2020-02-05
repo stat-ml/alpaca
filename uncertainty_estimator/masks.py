@@ -236,7 +236,7 @@ class DPPRankMask:
         if layer_num not in self.layer_correlations:
             x_matrix = x.cpu().numpy()
 
-            correlations = np.abs(np.corrcoef(x_matrix.T))
+            correlations = np.corrcoef(x_matrix.T)
 
             self.layer_correlations[layer_num] = correlations
             if self.likelihood:

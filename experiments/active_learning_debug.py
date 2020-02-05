@@ -29,7 +29,7 @@ val_size = 10_000
 start_size = 5_000
 step_size = 500
 steps = 20
-retrain = True
+reload = True
 nn_runs = 100
 
 
@@ -54,35 +54,25 @@ data = ImageDataBunch.create(train_ds, val_ds, bs=256)
 loss_func = torch.nn.CrossEntropyLoss()
 
 
-# model = AnotherConv()
+model = AnotherConv()
 # model = resnet_masked(pretrained=True)
-model = resnet_linear(pretrained=True, dropout_rate=0.5, freeze=False)
+# model = resnet_linear(pretrained=True, dropout_rate=0.5, freeze=False)
 learner = Learner(data, model, metrics=accuracy, loss_func=loss_func)
 
 model_path = "experiments/data/model.pt"
-if retrain or not os.path.exists(model_path):
-    learner.fit(10, 1e-2, wd=0.02)
-    torch.save(model.state_dict(), model_path)
-else:
+if reload and os.path.exists(model_path):
     model.load_state_dict(torch.load(model_path))
+else:
+    learner.fit(10, 1e-3, wd=0.02)
+    torch.save(model.state_dict(), model_path)
 
 
+images = torch.FloatTensor(x_val)# .to('cuda')
+inferencer = Inferencer(model)
 
-
-'Ok, lets make it'
-
-
-
-
-
-
-# images = torch.FloatTensor(x_val)# .to('cuda')
-# inferencer = Inferencer(model)
-
-# mask = build_mask('l_dpp')
-# estimator = BaldMasked(inferencer, dropout_mask=mask, num_classes=10, keep_runs=True, nn_runs=nn_runs)
-# estimations = estimator.estimate(images)
-
+mask = build_mask('rank_l_dpp')
+estimator = BaldMasked(inferencer, dropout_mask=mask, num_classes=10, nn_runs=nn_runs)
+estimations = estimator.estimate(images)
 
 
 # mcd = estimator.last_mcd_runs().reshape(20, nn_runs*10)
@@ -96,4 +86,3 @@ else:
 # # idxs = np.argsort(estimations)[::-1]
 # print(idxs)
 # print(estimations[idxs])
-
