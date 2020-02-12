@@ -88,7 +88,6 @@ train_tfms = [*rand_pad(4, 32), flip_lr(p=0.5)]  # Transformation to augment ima
 
 loss_func = torch.nn.CrossEntropyLoss()
 
-
 model = AnotherConv()
 # Active learning
 x_pool, y_pool = np.copy(x_pool_init), np.copy(y_pool_init)

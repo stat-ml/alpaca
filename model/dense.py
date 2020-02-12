@@ -5,10 +5,9 @@ import numpy as np
 
 
 class Dense(nn.Module):
-    def __init__(self, layer_sizes, postprocessing=lambda x: x, activation=None):
+    def __init__(self, layer_sizes, postprocessing=lambda x: x, activation=None, dropout_rate=0):
         super().__init__()
 
-        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         if activation is None:
             self.activation = F.elu
         else:
@@ -22,19 +21,19 @@ class Dense(nn.Module):
             self.fcs.append(fc)
         self.postprocessing = postprocessing
 
-        # self.double()
-        self.to(self.device)
+        self.dropout = nn.Dropout(dropout_rate)
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.to(device)
 
-    def forward(self, x, dropout_rate=0, dropout_mask=None):
-        # out = torch.FloatTensor(x).to(self.device) if isinstance(x, np.ndarray) else x
-        out = x
-        out = self.activation(self.fcs[0](out))
+    def forward(self, x, dropout_rate=0.5, dropout_mask=None):
+        out = self.activation(self.fcs[0](x))
 
         for layer_num, fc in enumerate(self.fcs[1:-1]):
             out = self.activation(fc(out))
-            if dropout_mask is None:
-                out = nn.Dropout(dropout_rate)(out)
-            else:
-                out = out*dropout_mask(out, dropout_rate, layer_num)
+            out = self.dropout(out)
+
+        if dropout_mask is not None:
+            out = out * dropout_mask(out, dropout_rate, layer_num=0)
+
         out = self.fcs[-1](out)
         return out
