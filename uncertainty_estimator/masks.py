@@ -83,6 +83,9 @@ class DecorrelationMask:
         self.layer_correlations = {}
 
 
+ATTEMPTS = 10
+
+
 class DPPMask:
     def __init__(self):
         self.dpps = {}
@@ -104,8 +107,12 @@ class DPPMask:
 
         # sampling nodes ids
         dpp = self.dpps[layer_num]
-        dpp.sample_exact()
-        ids = dpp.list_of_samples[-1]
+
+        for _ in range(ATTEMPTS):
+            dpp.sample_exact()
+            ids = dpp.list_of_samples[-1]
+            if len(ids):  # We should retry if mask is zero-length
+                break
 
         mask_len = x.data.size()[-1]
         mask = x.data.new(mask_len).fill_(0)
@@ -118,7 +125,7 @@ class DPPMask:
 
 
 class KDPPMask:
-    def __init__(self, noise_level=None, tol_level=1e-6):
+    def __init__(self, noise_level=None, tol_level=1e-5):
         self.layer_correlations = {}
         self.dry_run = True
         self.dpps = {}
