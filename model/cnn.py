@@ -22,9 +22,8 @@ class SimpleConv(nn.Module):
         x = self.activation(self.conv2(x))
         x = F.max_pool2d(x, 2, 2)
         x = x.view(-1, self.linear_size)
-        # x = self._dropout(x, dropout_mask, dropout_rate, 0)
         x = self.activation(self.fc1(x))
-        x = self._dropout(x, dropout_mask, dropout_rate, 1)
+        x = self._dropout(x, dropout_mask, dropout_rate, 0)
         x = self.fc2(x)
         return x
 
