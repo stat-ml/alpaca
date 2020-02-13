@@ -9,7 +9,7 @@ class Dense(nn.Module):
         super().__init__()
 
         if activation is None:
-            self.activation = F.elu
+            self.activation = F.celu
         else:
             self.activation = activation
 
@@ -30,10 +30,12 @@ class Dense(nn.Module):
 
         for layer_num, fc in enumerate(self.fcs[1:-1]):
             out = self.activation(fc(out))
-            out = self.dropout(out)
+            # out = self.dropout(out)
 
         if dropout_mask is not None:
             out = out * dropout_mask(out, dropout_rate, layer_num=0)
+        else:
+            out = self.dropout(out)
 
         out = self.fcs[-1](out)
         return out
