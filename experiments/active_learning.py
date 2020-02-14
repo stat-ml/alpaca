@@ -41,15 +41,15 @@ def prepare_cifar(config):
 
 cifar_config = {
     'val_size': 10_000,
-    'pool_size': 5_000,
-    'start_size': 1_000,
+    'pool_size': 10_000,
+    'start_size': 7_000,
     'step_size': 50,
     'steps': 30,
     'methods': ['random', 'error_oracle', 'max_entropy', *DEFAULT_MASKS],
     'epochs_per_step': 20,
     'patience': 2,
-    'model_type': 'conv',
-    'repeats': 1,
+    'model_type': 'resnet',
+    'repeats': 3,
     'nn_runs': 100,
     'batch_size': 256,
     'start_lr': 5e-4,
@@ -103,7 +103,7 @@ def main(config):
 
 
 def plot_metric(metrics, config, title=None):
-    plt.figure(figsize=(16, 9))
+    plt.figure(figsize=(13, 9))
     title = title or f"Validation accuracy, start size {config['start_size']}, step size {config['step_size']}, model {config['model_type']}"
     plt.title(title)
 

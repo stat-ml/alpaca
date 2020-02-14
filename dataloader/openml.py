@@ -54,3 +54,7 @@ class Cifar10(Openml):
     def __init__(self, **kwargs):
         super().__init__('CIFAR_10', **kwargs)
 
+
+class SVHN(Openml):
+    def __init__(self, **kwargs):
+        super().__init__('SVHN', **kwargs)

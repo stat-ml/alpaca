@@ -1,5 +1,6 @@
 import sys
 import torch
+from fastai.vision import (rand_pad, flip_lr)
 
 sys.path.append('..')
 from dataloader.builder import build_dataset
@@ -10,22 +11,27 @@ torch.cuda.set_device(1)
 torch.backends.cudnn.benchmark = True
 
 
+def _main():
+    dataset = build_dataset('svhn', val_size=5_000)
+    print(dataset)
 
-def prepare_mnist(config):
-    dataset = build_dataset('mnist', val_size=config['val_size'])
+
+
+def prepare_svhn(config):
+    dataset = build_dataset('svhn', val_size=config['val_size'])
     x_set, y_set = dataset.dataset('train')
     x_val, y_val = dataset.dataset('val')
 
-    shape = (-1, 1, 28, 28)
+    shape = (-1, 3, 32, 32)
     x_set = ((x_set - 128) / 128).reshape(shape)
     x_val = ((x_val - 128) / 128).reshape(shape)
 
-    train_tfms = []
+    train_tfms = [*rand_pad(4, 32), flip_lr(p=0.5)]  # Transformation to augment images
 
     return x_set, y_set, x_val, y_val, train_tfms
 
 
-mnist_config = {
+svnh_config = {
     'repeats': 5,
     'start_size': 100,
     'step_size': 20,
@@ -40,9 +46,10 @@ mnist_config = {
     'batch_size': 32,
     'start_lr': 5e-4,
     'weight_decay': 0.2,
-    'prepare_dataset': prepare_mnist
+    'prepare_dataset': prepare_svhn
 }
 
 
 if __name__ == '__main__':
-    main(mnist_config)
+    _main()
+    # main(svnh_config)
