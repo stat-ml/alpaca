@@ -19,6 +19,8 @@ from dataloader.builder import build_dataset
 from uncertainty_estimator.masks import DEFAULT_MASKS
 from experiments.utils.fastai import ImageArrayDS
 from active_learning.simple_update import update_set
+from experiment_setup import ROOT_DIR
+from pathlib import Path
 
 
 # torch.cuda.set_device(1)
@@ -103,6 +105,9 @@ def main(config):
     plot_metric(val_accuracy, config)
 
 
+sns.set_style("darkgrid")
+
+
 def plot_metric(metrics, config, title=None):
     plt.figure(figsize=(13, 9))
 
@@ -111,12 +116,13 @@ def plot_metric(metrics, config, title=None):
     title = title or default_title
     plt.title(title)
 
-    df = pd.DataFrame(metrics, columns=['accuracy', 'step', 'method'])
-    sns.lineplot('step', 'accuracy', hue='method', data=df)
-    plt.legend(loc='upper left')
+    df = pd.DataFrame(metrics, columns=['Accuracy', 'Step', 'Method'])
+    sns.lineplot('Step', 'Accuracy', hue='Method', data=df)
+    # plt.legend(loc='upper left')
 
     filename = f"{config['name']}_{config['model_type']}_{config['start_size']}_{config['step_size']}.png"
-    plt.savefig(f"data/xor/{filename}")
+
+    plt.savefig(Path(ROOT_DIR)/'experiments'/'data'/filename)
     plt.show()
 
 
