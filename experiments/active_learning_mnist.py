@@ -40,7 +40,8 @@ mnist_config = {
     'batch_size': 32,
     'start_lr': 5e-4,
     'weight_decay': 0.2,
-    'prepare_dataset': prepare_mnist
+    'prepare_dataset': prepare_mnist,
+    'name': 'mnist'
 }
 
 

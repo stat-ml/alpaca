@@ -54,7 +54,8 @@ cifar_config = {
     'batch_size': 256,
     'start_lr': 5e-4,
     'weight_decay': 0.2,
-    'prepare_dataset': prepare_cifar
+    'prepare_dataset': prepare_cifar,
+    'name': 'cifar'
 }
 
 
@@ -104,13 +105,19 @@ def main(config):
 
 def plot_metric(metrics, config, title=None):
     plt.figure(figsize=(13, 9))
-    title = title or f"Validation accuracy, start size {config['start_size']}, step size {config['step_size']}, model {config['model_type']}"
+
+    default_title = f"Validation accuracy, start size {config['start_size']}, "
+    default_title += f"step size {config['step_size']}, model {config['model_type']}"
+    title = title or default_title
     plt.title(title)
 
     df = pd.DataFrame(metrics, columns=['accuracy', 'step', 'method'])
     sns.lineplot('step', 'accuracy', hue='method', data=df)
-    plt.show()
     plt.legend(loc='upper left')
+
+    filename = f"{config['name']}_{config['model_type']}_{config['start_size']}_{config['step_size']}.png"
+    plt.savefig(f"data/xor/{filename}")
+    plt.show()
 
 
 def build_model(model_type):

@@ -46,7 +46,8 @@ svnh_config = {
     'batch_size': 32,
     'start_lr': 5e-4,
     'weight_decay': 0.2,
-    'prepare_dataset': prepare_svhn
+    'prepare_dataset': prepare_svhn,
+    'name': 'svhn'
 }
 
 
