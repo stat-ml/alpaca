@@ -36,6 +36,11 @@ def update_set(x_pool, x_train, y_pool, y_train, step, method='basic_bern', mode
         predictions = F.softmax(inferencer(images), dim=1).detach().cpu().numpy()
         errors = -np.log(predictions[np.arange(len(predictions)), y_pool])
         idxs = np.random.choice(len(predictions), step, replace=False, p=errors/sum(errors))
+    elif method == 'max_entropy':
+        predictions = F.softmax(inferencer(images), dim=1).detach().cpu().numpy()
+        entropies = entropy(predictions)
+        idxs = np.argsort(entropies)[::-1][:10]
+        print(idxs)
     else:
         mask = build_mask(method)
         estimator = build_estimator('bald_masked', inferencer, dropout_mask=mask, num_classes=10, nn_runs=nn_runs)
@@ -48,4 +53,9 @@ def update_set(x_pool, x_train, y_pool, y_train, step, method='basic_bern', mode
     y_train = np.concatenate((y_train, y_add))
     x_pool = np.delete(x_pool, idxs, axis=0)
     y_pool = np.delete(y_pool, idxs, axis=0)
+
     return x_pool, x_train, y_pool, y_train
+
+
+def entropy(x):
+    return -np.sum(x * np.log(np.clip(x, 1e-8, 1)), axis=-1)
