@@ -23,7 +23,7 @@ from experiment_setup import ROOT_DIR
 from pathlib import Path
 
 
-# torch.cuda.set_device(1)
+torch.cuda.set_device(1)
 torch.backends.cudnn.benchmark = True
 
 
@@ -43,22 +43,35 @@ def prepare_cifar(config):
 
 cifar_config = {
     'val_size': 10_000,
-    'pool_size': 10_000,
+    'pool_size': 15_000,
     'start_size': 7_000,
     'step_size': 50,
     'steps': 30,
     'methods': ['random', 'error_oracle', 'max_entropy', *DEFAULT_MASKS],
-    'epochs_per_step': 20,
+    'epochs_per_step': 30,
     'patience': 2,
     'model_type': 'resnet',
     'repeats': 3,
     'nn_runs': 100,
-    'batch_size': 256,
+    'batch_size': 128,
     'start_lr': 5e-4,
     'weight_decay': 0.2,
     'prepare_dataset': prepare_cifar,
     'name': 'cifar'
 }
+
+experiment = 3
+
+if experiment == 2:
+    cifar_config['pool_size'] = 5000
+    cifar_config['start_size'] = 2000
+    cifar_config['step_size'] = 20
+    cifar_config['model'] = 'conv'
+elif experiment == 3:
+    cifar_config['pool_size'] = 20_000
+    cifar_config['start_size'] = 10_000
+    cifar_config['step_size'] = 100
+    cifar_config['model'] = 'resent'
 
 
 def main(config):
@@ -109,7 +122,7 @@ sns.set_style("darkgrid")
 
 
 def plot_metric(metrics, config, title=None):
-    plt.figure(figsize=(13, 9))
+    plt.figure(figsize=(10, 7))
 
     default_title = f"Validation accuracy, start size {config['start_size']}, "
     default_title += f"step size {config['step_size']}, model {config['model_type']}"
@@ -121,8 +134,7 @@ def plot_metric(metrics, config, title=None):
     # plt.legend(loc='upper left')
 
     filename = f"{config['name']}_{config['model_type']}_{config['start_size']}_{config['step_size']}.png"
-
-    plt.savefig(Path(ROOT_DIR)/'experiments'/'data'/filename)
+    plt.savefig(Path(ROOT_DIR)/'experiments'/'data'/'al'/filename)
     plt.show()
 
 

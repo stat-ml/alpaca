@@ -30,7 +30,7 @@ def prepare_svhn(config):
     return x_set, y_set, x_val, y_val, train_tfms
 
 
-svnh_config = {
+svhn_config = {
     'repeats': 3,
     'start_size': 5_000,
     'step_size': 50,
@@ -49,6 +49,25 @@ svnh_config = {
     'name': 'svhn'
 }
 
+experiment = 4
+
+if experiment == 2:
+    svhn_config['pool_size'] = 5000
+    svhn_config['start_size'] = 2000
+    svhn_config['step_size'] = 20
+    svhn_config['model'] = 'conv'
+elif experiment == 3:
+    svhn_config['pool_size'] = 20_000
+    svhn_config['start_size'] = 10_000
+    svhn_config['step_size'] = 100
+    svhn_config['model'] = 'resent'
+elif experiment == 4:
+    svhn_config['pool_size'] = 5_000
+    svhn_config['start_size'] = 1_000
+    svhn_config['step_size'] = 30
+    svhn_config['model'] = 'resent'
+    svhn_config['repeats'] = 10
+
 
 if __name__ == '__main__':
-    main(svnh_config)
+    main(svhn_config)
