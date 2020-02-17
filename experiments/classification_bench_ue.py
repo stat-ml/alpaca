@@ -59,6 +59,8 @@ config_svhn.update({
     'prepare_dataset': prepare_svhn
 })
 
+configs = [config_mnist, config_cifar, config_svhn]
+
 
 def benchmark_uncertainty(config):
     results = []
@@ -101,14 +103,14 @@ def benchmark_uncertainty(config):
     plt.title(f"{config['name']} uncertainty ROC")
     plt.legend()
     plt.savefig(dir / f"roc_{config['name']}_{config['train_size']}")
-    plt.show()
+    # plt.show()
 
     plt.figure(figsize=(10, 8))
     plt.title(f"{config['name']} uncertainty ROC-AUC")
     df = pd.DataFrame(results, columns=['Estimator type', 'ROC-AUC score'])
     sns.boxplot('Estimator type', 'ROC-AUC score', data=df)
     plt.savefig(dir / f"boxplot_{config['name']}_{config['train_size']}")
-    plt.show()
+    # plt.show()
 
 
 def calc_ue(model, images, probabilities, estimator_type='max_prob', nn_runs=100):
@@ -126,6 +128,6 @@ def calc_ue(model, images, probabilities, estimator_type='max_prob', nn_runs=100
 
 
 if __name__ == '__main__':
-    for config in [config_cifar]:
+    for config in configs:
         print(config)
         benchmark_uncertainty(config)
