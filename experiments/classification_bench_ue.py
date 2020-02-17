@@ -29,12 +29,12 @@ from active_learning.simple_update import entropy
 
 
 config_mnist = {
-    'val_size': 10_000,
-    'train_size': 5_000,
+    'val_size': 5_000,
+    'train_size': 1_024,
     'model_type': 'simple_conv',
     'batch_size': 256,
     'patience': 3,
-    'epochs': 50,
+    'epochs': 30,
     'start_lr': 1e-3,
     'weight_decay': 0.1,
     'reload': False,
@@ -59,7 +59,8 @@ config_svhn.update({
     'prepare_dataset': prepare_svhn
 })
 
-configs = [config_mnist, config_cifar, config_svhn]
+# configs = [config_mnist, config_cifar, config_svhn]
+configs = [config_mnist]
 
 
 def benchmark_uncertainty(config):
@@ -102,15 +103,15 @@ def benchmark_uncertainty(config):
     dir = Path(ROOT_DIR) / 'experiments' / 'data' / 'ood'
     plt.title(f"{config['name']} uncertainty ROC")
     plt.legend()
-    plt.savefig(dir / f"roc_{config['name']}_{config['train_size']}")
-    # plt.show()
+    plt.savefig(dir / f"var_roc_{config['name']}_{config['train_size']}")
+    plt.show()
 
     plt.figure(figsize=(10, 8))
     plt.title(f"{config['name']} uncertainty ROC-AUC")
     df = pd.DataFrame(results, columns=['Estimator type', 'ROC-AUC score'])
     sns.boxplot('Estimator type', 'ROC-AUC score', data=df)
-    plt.savefig(dir / f"boxplot_{config['name']}_{config['train_size']}")
-    # plt.show()
+    plt.savefig(dir / f"var_boxplot_{config['name']}_{config['train_size']}")
+    plt.show()
 
 
 def calc_ue(model, images, probabilities, estimator_type='max_prob', nn_runs=100):

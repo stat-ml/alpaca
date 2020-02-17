@@ -28,7 +28,8 @@ class BaldMasked:
     """
     Estimate uncertainty for samples with MCDUE approach
     """
-    def __init__(self, net, nn_runs=100, dropout_mask=None, dropout_rate=.5, num_classes=2, keep_runs=False):
+    # TODO: var_ration to separate class!!
+    def __init__(self, net, nn_runs=100, dropout_mask=None, dropout_rate=.5, num_classes=2, keep_runs=False, var_ratio=True):
         self.net = net
         self.nn_runs = nn_runs
         self.num_classes = num_classes
@@ -36,6 +37,7 @@ class BaldMasked:
         self.dropout_mask = dropout_mask
         self.keep_runs = keep_runs
         self._mcd_runs = np.array([])
+        self.var_ratio = var_ratio
 
     def estimate(self, X_pool, *args):
         mcd_runs = np.zeros((X_pool.shape[0], self.nn_runs, self.num_classes))
@@ -56,7 +58,18 @@ class BaldMasked:
             if self.keep_runs:
                 self._mcd_runs = mcd_runs
 
-        return _bald(mcd_runs)
+        return self._aquisition(mcd_runs)
+
+    def _aquisition(self, mcd_runs):
+        if self.var_ratio:
+            predictions = np.argmax(mcd_runs, axis=-1)
+            # count how many time repeats the strongest class
+            mode_count = lambda preds : np.max(np.bincount(preds))
+            modes = [mode_count(point) for point in predictions]
+            ue = 1 - np.array(modes) / self.nn_runs
+            return ue
+        else:
+            return _bald(mcd_runs)
 
     def reset(self):
         if hasattr(self.dropout_mask, 'reset'):
@@ -67,6 +80,9 @@ class BaldMasked:
         if not self.keep_runs:
             print("mcd_runs: You should set `keep_runs=True` to properly use this method")
         return self._mcd_runs
+
+
+
 
 
 class BaldEnsemble:
