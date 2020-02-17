@@ -28,7 +28,7 @@ from experiment_setup import build_estimator
 from active_learning.simple_update import entropy
 from experiments.utils.visual_datasets import prepare_fashion_mnist
 
-torch.cuda.set_device(0)
+torch.cuda.set_device(1)
 
 config_mnist = {
     'val_size': 5_000,
@@ -52,17 +52,11 @@ config_cifar = deepcopy(config_mnist)
 config_cifar.update({
     'model_type': 'resnet',
     'name': 'CIFAR-10',
-    'prepare_dataset': prepare_cifar
+    'prepare_dataset': prepare_cifar,
+    'alternative_dataset': prepare_svhn,
 })
 
-config_svhn = deepcopy(config_mnist)
-config_svhn.update({
-    'model_type': 'resnet',
-    'name': 'SVHN',
-    'prepare_dataset': prepare_svhn
-})
-
-configs = [config_mnist]
+configs = [config_cifar]
 
 
 def benchmark_ood(config):
@@ -137,4 +131,3 @@ if __name__ == '__main__':
     for config in configs:
         print(config)
         benchmark_ood(config)
-
