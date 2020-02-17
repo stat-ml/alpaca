@@ -101,16 +101,6 @@ sns.lineplot('step', 'accuracy', hue='method', data=df)
 plt.show()
 
 
-
-
-
-
-
-
-
-
-
-
 # idxs = np.argsort(entropies)[::-1][:10]
 # print(idxs)
 
