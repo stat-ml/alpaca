@@ -27,6 +27,8 @@ from experiments.active_learning_mnist import prepare_mnist
 from experiments.active_learning import build_model, train_classifier
 from experiments.utils.fastai import Inferencer
 from sklearn.metrics import roc_auc_score
+from uncertainty_estimator.masks import build_mask
+from experiment_setup import build_estimator
 
 
 config = {
@@ -37,47 +39,62 @@ config = {
     'epochs': 50,
     'start_lr': 5e-4,
     'weight_decay': 0.2,
-    'reload': False
+    'reload': False,
+    'nn_runs': 100
 }
 
 
+def benchmark_uncertainty():
+    x_train, y_train, x_val, y_val, train_tfms = prepare_mnist(config)
+
+    train_ds = ImageArrayDS(x_train, y_train, train_tfms)
+    val_ds = ImageArrayDS(x_val, y_val)
+    data = ImageDataBunch.create(train_ds, val_ds, bs=256)
+
+    loss_func = torch.nn.CrossEntropyLoss()
+    np.set_printoptions(threshold=sys.maxsize, suppress=True)
+    model = SimpleConv()
+
+    learner = Learner(data, model, metrics=accuracy, loss_func=loss_func)
+    #
+    model_path = "experiments/data/model.pt"
+    if config['reload'] and os.path.exists(model_path):
+        model.load_state_dict(torch.load(model_path))
+    else:
+        learner.fit(10, 1e-3, wd=0.02)
+        torch.save(model.state_dict(), model_path)
+    images = torch.FloatTensor(x_val).cuda()
+
+    probabilities = F.softmax(model(images), dim=1).detach().cpu().numpy()
+    predictions = np.argmax(probabilities, axis=-1)
+
+    estimators = ['basic_bern', 'max_prob']
+
+    for name in estimators:
+        ue = calc_ue(model, images, probabilities, name, config['nn_runs'])
+        mistake = 1 - (predictions == y_val).astype(np.int)
+
+        print(name, roc_auc_score(mistake, ue))
 
 
-x_train, y_train, x_val, y_val, train_tfms = prepare_mnist(config)
+def calc_ue(model, images, probabilities, estimator_type='max_prob', nn_runs=100):
+    # Uncertainty estimation as 1 - p_max
+    if estimator_type == 'max_prob':
+        ue = 1 - probabilities[np.arange(len(probabilities)), np.argmax(probabilities, axis=-1)]
+    else:
+        mask = build_mask(estimator_type)
+        estimator = build_estimator('bald_masked', model, dropout_mask=mask, num_classes=10, nn_runs=nn_runs)
+        ue = estimator.estimate(images)
+        print(ue[:10])
 
-train_ds = ImageArrayDS(x_train, y_train, train_tfms)
-val_ds = ImageArrayDS(x_val, y_val)
-data = ImageDataBunch.create(train_ds, val_ds, bs=256)
-
-loss_func = torch.nn.CrossEntropyLoss()
-np.set_printoptions(threshold=sys.maxsize, suppress=True)
-model = SimpleConv()
-
-learner = Learner(data, model, metrics=accuracy, loss_func=loss_func)
-#
-model_path = "experiments/data/model.pt"
-if config['reload'] and os.path.exists(model_path):
-    model.load_state_dict(torch.load(model_path))
-else:
-    learner.fit(10, 1e-3, wd=0.02)
-    torch.save(model.state_dict(), model_path)
-images = torch.FloatTensor(x_val)# .to('cuda')
-inferencer = Inferencer(model)
-
-probabilities = F.softmax(inferencer(images), dim=1).detach().cpu().numpy()
-predictions = np.argmax(probabilities, axis=-1)
-
-mistake = 1 - (predictions == y_val).astype(np.int)
-# Uncertainty estimation as 1 - p_max
-ue = 1 - probabilities[np.arange(len(probabilities)), np.argmax(probabilities, axis=-1)]
+    return ue
 
 
-print(roc_auc_score(mistake, ue))
+if __name__ == '__main__':
+    benchmark_uncertainty()
 
 
-# mask = build_mask('k_dpp')
-# estimator = BaldMasked(inferencer, dropout_mask=mask, num_classes=10, nn_runs=nn_runs)
-# estimations = estimator.estimate(images)
+
 # print(estimations)
 
 
