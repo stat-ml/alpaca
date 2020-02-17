@@ -10,7 +10,6 @@ torch.cuda.set_device(1)
 torch.backends.cudnn.benchmark = True
 
 
-
 def prepare_mnist(config):
     dataset = build_dataset('mnist', val_size=config['val_size'])
     x_set, y_set = dataset.dataset('train')
@@ -33,7 +32,7 @@ mnist_config = {
     'pool_size': 10_000,
     'steps': 30,
     'methods': ['random', 'error_oracle', 'max_entropy', *DEFAULT_MASKS],
-    'epochs_per_step': 30,
+    'epochs': 30,
     'patience': 2,
     'model_type': 'simple_conv',
     'nn_runs': 100,

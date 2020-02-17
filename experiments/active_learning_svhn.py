@@ -38,7 +38,7 @@ svhn_config = {
     'pool_size': 12_000,
     'steps': 30,
     'methods': ['random', 'error_oracle', 'max_entropy', *DEFAULT_MASKS],
-    'epochs_per_step': 30,
+    'epochs': 30,
     'patience': 2,
     'model_type': 'resnet',
     'nn_runs': 100,
