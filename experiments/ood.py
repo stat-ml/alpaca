@@ -1,4 +1,4 @@
-import os
+from copy import deepcopy
 import sys
 from functools import partial
 
@@ -15,45 +15,56 @@ from fastai.vision import (rand_pad, flip_lr, ImageDataBunch, Learner, accuracy,
 from fastai.callbacks import EarlyStoppingCallback
 
 sys.path.append('..')
-from model.cnn import AnotherConv, SimpleConv
-from model.resnet import resnet_masked
-from dataloader.builder import build_dataset
 from uncertainty_estimator.masks import DEFAULT_MASKS
 from experiments.utils.fastai import ImageArrayDS
-from active_learning.simple_update import update_set
 from experiment_setup import ROOT_DIR
 from pathlib import Path
 from experiments.active_learning_mnist import prepare_mnist
-from experiments.active_learning import build_model, train_classifier
-from experiments.utils.fastai import Inferencer
+from experiments.active_learning import build_model, prepare_cifar
+from experiments.active_learning_svhn import prepare_svhn
 from sklearn.metrics import roc_auc_score, roc_curve
 from uncertainty_estimator.masks import build_mask
 from experiment_setup import build_estimator
 from active_learning.simple_update import entropy
 
 
-config = {
+config_mnist = {
     'val_size': 10_000,
-    'train_size': 1_000,
+    'train_size': 5_000,
     'model_type': 'simple_conv',
     'batch_size': 256,
     'patience': 3,
     'epochs': 50,
-    'start_lr': 5e-3,
-    'weight_decay': 0.2,
+    'start_lr': 1e-3,
+    'weight_decay': 0.1,
     'reload': False,
     'nn_runs': 100,
     'estimators': ['max_prob', 'max_entropy', *DEFAULT_MASKS],
     'repeats': 5,
-    'name': 'MNIST'
+    'name': 'MNIST',
+    'prepare_dataset': prepare_mnist,
 }
+
+config_cifar = deepcopy(config_mnist)
+config_cifar.update({
+    'model_type': 'resnet',
+    'name': 'CIFAR-10',
+    'prepare_dataset': prepare_cifar
+})
+
+config_svhn = deepcopy(config_mnist)
+config_svhn.update({
+    'model_type': 'resnet',
+    'name': 'SVHN',
+    'prepare_dataset': prepare_svhn
+})
 
 
 def benchmark_uncertainty(config):
     results = []
     plt.figure(figsize=(10, 8))
     for i in range(config['repeats']):
-        x_set, y_set, x_val, y_val, train_tfms = prepare_mnist(config)
+        x_set, y_set, x_val, y_val, train_tfms = config['prepare_dataset'](config)
         _, x_train, _, y_train = train_test_split(
             x_set, y_set, test_size=config['train_size'], stratify=y_set)
 
@@ -86,13 +97,17 @@ def benchmark_uncertainty(config):
                 fpr, tpr, thresholds = roc_curve(mistake, ue, pos_label=1)
                 plt.plot(fpr, tpr, label=name, alpha=0.8)
 
-    plt.title('MNIST uncertainty ROC')
+    dir = Path(ROOT_DIR) / 'experiments' / 'data' / 'ood'
+    plt.title(f"{config['name']} uncertainty ROC")
     plt.legend()
+    plt.savefig(dir / f"roc_{config['name']}_{config['train_size']}")
     plt.show()
 
     plt.figure(figsize=(10, 8))
+    plt.title(f"{config['name']} uncertainty ROC-AUC")
     df = pd.DataFrame(results, columns=['Estimator type', 'ROC-AUC score'])
     sns.boxplot('Estimator type', 'ROC-AUC score', data=df)
+    plt.savefig(dir / f"boxplot_{config['name']}_{config['train_size']}")
     plt.show()
 
 
@@ -111,5 +126,6 @@ def calc_ue(model, images, probabilities, estimator_type='max_prob', nn_runs=100
 
 
 if __name__ == '__main__':
-    benchmark_uncertainty(config)
-
+    for config in [config_cifar]:
+        print(config)
+        benchmark_uncertainty(config)
