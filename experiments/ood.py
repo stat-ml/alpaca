@@ -45,34 +45,35 @@ config = {
     'nn_runs': 100,
     'estimators': ['max_prob', 'max_entropy', *DEFAULT_MASKS],
     'repeats': 5,
+    'name': 'MNIST'
 }
 
 
 def benchmark_uncertainty(config):
-    x_set, y_set, x_val, y_val, train_tfms = prepare_mnist(config)
-    _, x_train, _, y_train = train_test_split(
-        x_set, y_set, test_size=config['train_size'], stratify=y_set)
-
-    train_ds = ImageArrayDS(x_train, y_train, train_tfms)
-    val_ds = ImageArrayDS(x_val, y_val)
-    data = ImageDataBunch.create(train_ds, val_ds, bs=config['batch_size'])
-
-    loss_func = torch.nn.CrossEntropyLoss()
-    np.set_printoptions(threshold=sys.maxsize, suppress=True)
-
-    model = build_model(config['model_type'])
-    callbacks = [partial(EarlyStoppingCallback, min_delta=1e-3, patience=config['patience'])]
-    learner = Learner(data, model, metrics=accuracy, loss_func=loss_func, callback_fns=callbacks)
-    learner.fit(config['epochs'], config['start_lr'], wd=config['weight_decay'])
-
-    images = torch.FloatTensor(x_val).cuda()
-
-    probabilities = F.softmax(model(images), dim=1).detach().cpu().numpy()
-    predictions = np.argmax(probabilities, axis=-1)
-
     results = []
     plt.figure(figsize=(10, 8))
     for i in range(config['repeats']):
+        x_set, y_set, x_val, y_val, train_tfms = prepare_mnist(config)
+        _, x_train, _, y_train = train_test_split(
+            x_set, y_set, test_size=config['train_size'], stratify=y_set)
+
+        train_ds = ImageArrayDS(x_train, y_train, train_tfms)
+        val_ds = ImageArrayDS(x_val, y_val)
+        data = ImageDataBunch.create(train_ds, val_ds, bs=config['batch_size'])
+
+        loss_func = torch.nn.CrossEntropyLoss()
+        np.set_printoptions(threshold=sys.maxsize, suppress=True)
+
+        model = build_model(config['model_type'])
+        callbacks = [partial(EarlyStoppingCallback, min_delta=1e-3, patience=config['patience'])]
+        learner = Learner(data, model, metrics=accuracy, loss_func=loss_func, callback_fns=callbacks)
+        learner.fit(config['epochs'], config['start_lr'], wd=config['weight_decay'])
+
+        images = torch.FloatTensor(x_val).cuda()
+
+        probabilities = F.softmax(model(images), dim=1).detach().cpu().numpy()
+        predictions = np.argmax(probabilities, axis=-1)
+
         for name in config['estimators']:
             ue = calc_ue(model, images, probabilities, name, config['nn_runs'])
             mistake = 1 - (predictions == y_val).astype(np.int)
