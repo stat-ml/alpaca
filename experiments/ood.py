@@ -26,9 +26,10 @@ from pathlib import Path
 from experiments.active_learning_mnist import prepare_mnist
 from experiments.active_learning import build_model, train_classifier
 from experiments.utils.fastai import Inferencer
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, roc_curve
 from uncertainty_estimator.masks import build_mask
 from experiment_setup import build_estimator
+from active_learning.simple_update import entropy
 
 
 config = {
@@ -40,7 +41,9 @@ config = {
     'start_lr': 5e-4,
     'weight_decay': 0.2,
     'reload': False,
-    'nn_runs': 100
+    'nn_runs': 100,
+    'estimators': ['max_prob', 'max_entropy', *DEFAULT_MASKS],
+    'repeats': 1
 }
 
 
@@ -68,19 +71,32 @@ def benchmark_uncertainty():
     probabilities = F.softmax(model(images), dim=1).detach().cpu().numpy()
     predictions = np.argmax(probabilities, axis=-1)
 
-    estimators = ['basic_bern', 'max_prob']
+    results = []
+    plt.figure(figsize=(10, 8))
+    for i in range(config['repeats']):
+        for name in config['estimators']:
+            ue = calc_ue(model, images, probabilities, name, config['nn_runs'])
+            mistake = 1 - (predictions == y_val).astype(np.int)
 
-    for name in estimators:
-        ue = calc_ue(model, images, probabilities, name, config['nn_runs'])
-        mistake = 1 - (predictions == y_val).astype(np.int)
+            roc_auc = roc_auc_score(mistake, ue)
+            print(name, roc_auc)
+            results.append((name, roc_auc))
 
-        print(name, roc_auc_score(mistake, ue))
+            if i == config['repeats'] - 1:
+                fpr, tpr, thresholds = roc_curve(mistake, ue, pos_label=1)
+                plt.plot(fpr, tpr, label=name, alpha=0.8)
+
+    plt.title('MNIST uncertainty ROC')
+    plt.legend()
+    plt.show()
 
 
 def calc_ue(model, images, probabilities, estimator_type='max_prob', nn_runs=100):
     # Uncertainty estimation as 1 - p_max
     if estimator_type == 'max_prob':
         ue = 1 - probabilities[np.arange(len(probabilities)), np.argmax(probabilities, axis=-1)]
+    elif estimator_type == 'max_entropy':
+        ue = entropy(probabilities)
     else:
         mask = build_mask(estimator_type)
         estimator = build_estimator('bald_masked', model, dropout_mask=mask, num_classes=10, nn_runs=nn_runs)
@@ -93,8 +109,5 @@ def calc_ue(model, images, probabilities, estimator_type='max_prob', nn_runs=100
 if __name__ == '__main__':
     benchmark_uncertainty()
 
-
-
 # print(estimations)
-
 
