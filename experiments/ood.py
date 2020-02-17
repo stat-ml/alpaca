@@ -34,38 +34,37 @@ from active_learning.simple_update import entropy
 
 config = {
     'val_size': 10_000,
+    'train_size': 1_000,
     'model_type': 'simple_conv',
     'batch_size': 256,
     'patience': 3,
     'epochs': 50,
-    'start_lr': 5e-4,
+    'start_lr': 5e-3,
     'weight_decay': 0.2,
     'reload': False,
     'nn_runs': 100,
     'estimators': ['max_prob', 'max_entropy', *DEFAULT_MASKS],
-    'repeats': 1
+    'repeats': 5,
 }
 
 
-def benchmark_uncertainty():
-    x_train, y_train, x_val, y_val, train_tfms = prepare_mnist(config)
+def benchmark_uncertainty(config):
+    x_set, y_set, x_val, y_val, train_tfms = prepare_mnist(config)
+    _, x_train, _, y_train = train_test_split(
+        x_set, y_set, test_size=config['train_size'], stratify=y_set)
 
     train_ds = ImageArrayDS(x_train, y_train, train_tfms)
     val_ds = ImageArrayDS(x_val, y_val)
-    data = ImageDataBunch.create(train_ds, val_ds, bs=256)
+    data = ImageDataBunch.create(train_ds, val_ds, bs=config['batch_size'])
 
     loss_func = torch.nn.CrossEntropyLoss()
     np.set_printoptions(threshold=sys.maxsize, suppress=True)
-    model = SimpleConv()
 
-    learner = Learner(data, model, metrics=accuracy, loss_func=loss_func)
-    #
-    model_path = "experiments/data/model.pt"
-    if config['reload'] and os.path.exists(model_path):
-        model.load_state_dict(torch.load(model_path))
-    else:
-        learner.fit(10, 1e-3, wd=0.02)
-        torch.save(model.state_dict(), model_path)
+    model = build_model(config['model_type'])
+    callbacks = [partial(EarlyStoppingCallback, min_delta=1e-3, patience=config['patience'])]
+    learner = Learner(data, model, metrics=accuracy, loss_func=loss_func, callback_fns=callbacks)
+    learner.fit(config['epochs'], config['start_lr'], wd=config['weight_decay'])
+
     images = torch.FloatTensor(x_val).cuda()
 
     probabilities = F.softmax(model(images), dim=1).detach().cpu().numpy()
@@ -90,9 +89,13 @@ def benchmark_uncertainty():
     plt.legend()
     plt.show()
 
+    plt.figure(figsize=(10, 8))
+    df = pd.DataFrame(results, columns=['Estimator type', 'ROC-AUC score'])
+    sns.boxplot('Estimator type', 'ROC-AUC score', data=df)
+    plt.show()
+
 
 def calc_ue(model, images, probabilities, estimator_type='max_prob', nn_runs=100):
-    # Uncertainty estimation as 1 - p_max
     if estimator_type == 'max_prob':
         ue = 1 - probabilities[np.arange(len(probabilities)), np.argmax(probabilities, axis=-1)]
     elif estimator_type == 'max_entropy':
@@ -107,7 +110,5 @@ def calc_ue(model, images, probabilities, estimator_type='max_prob', nn_runs=100
 
 
 if __name__ == '__main__':
-    benchmark_uncertainty()
-
-# print(estimations)
+    benchmark_uncertainty(config)
 
