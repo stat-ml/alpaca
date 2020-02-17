@@ -91,7 +91,7 @@ def _entropy(x):
 def _bald(logits):
     predictions = softmax(logits, axis=-1)
 
-    expected_entropy = np.mean(_entropy(predictions), axis=1)
     predictive_entropy = _entropy(np.mean(predictions, axis=1))
+    expected_entropy = np.mean(_entropy(predictions), axis=1)
 
     return predictive_entropy - expected_entropy

@@ -68,7 +68,6 @@ class AutoEncoder(nn.Module):
         return test_loss
 
 
-
 class VAE(nn.Module):
     def __init__(self, input_size, hidden_size, embedding_size):
         super(VAE, self).__init__()
