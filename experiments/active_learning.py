@@ -22,9 +22,7 @@ from active_learning.simple_update import update_set
 from experiment_setup import ROOT_DIR
 from pathlib import Path
 
-
 torch.cuda.set_device(1)
-torch.backends.cudnn.benchmark = True
 
 
 def prepare_cifar(config):
