@@ -63,7 +63,7 @@ class BaldMasked:
         return self._aquisition(mcd_runs)
 
     def _aquisition(self, mcd_runs):
-        if self.acquisition == 'var_ration':
+        if self.acquisition == 'var_ratio':
             predictions = np.argmax(mcd_runs, axis=-1)
             # count how many time repeats the strongest class
             mode_count = lambda preds : np.max(np.bincount(preds))
@@ -74,8 +74,10 @@ class BaldMasked:
             probabilities = softmax(mcd_runs, axis=-1)
             ue = np.mean(np.std(probabilities, axis=-2), axis=-1)
             return ue
-        else:
+        elif self.acquisition == 'bald':
             return _bald(mcd_runs)
+        else:
+            raise ValueError
 
     def reset(self):
         if hasattr(self.dropout_mask, 'reset'):

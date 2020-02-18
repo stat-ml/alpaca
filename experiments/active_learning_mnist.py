@@ -40,7 +40,7 @@ mnist_config = {
     'start_lr': 5e-4,
     'weight_decay': 0.2,
     'prepare_dataset': prepare_mnist,
-    'name': 'mnist'
+    'name': 'mnist_beauty'
 }
 
 

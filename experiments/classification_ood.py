@@ -29,7 +29,7 @@ from active_learning.simple_update import entropy
 from experiments.utils.visual_datasets import prepare_fashion_mnist
 
 torch.cuda.set_device(1)
-label = 'ratio_2'
+label = 'ratio_3'
 
 config_mnist = {
     'train_size': 50_000,

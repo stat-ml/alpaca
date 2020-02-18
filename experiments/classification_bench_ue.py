@@ -69,8 +69,9 @@ config_svhn.update({
     'prepare_dataset': prepare_svhn
 })
 
-configs = [config_cifar, config_mnist, config_svhn]
-label = 'ratio_2'
+# configs = [config_cifar, config_mnist, config_svhn]
+configs = [config_svhn]
+label = 'ratio_3'
 
 
 def benchmark_uncertainty(config):

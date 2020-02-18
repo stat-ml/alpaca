@@ -127,7 +127,7 @@ class DPPMask:
 
 
 class KDPPMask:
-    def __init__(self, noise_level=None, tol_level=1e-5):
+    def __init__(self, noise_level=None, tol_level=1e-3):
         self.layer_correlations = {}
         self.dry_run = True
         self.dpps = {}

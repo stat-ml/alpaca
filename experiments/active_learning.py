@@ -128,7 +128,7 @@ def train_classifier(model, config, x_train, y_train, x_val, y_val, train_tfms=N
 
 
 def plot_metric(metrics, config, title=None):
-    plt.figure(figsize=(10, 7))
+    plt.figure(figsize=(8, 6))
 
     default_title = f"Validation accuracy, start size {config['start_size']}, "
     default_title += f"step size {config['step_size']}, model {config['model_type']}"
