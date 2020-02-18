@@ -28,18 +28,22 @@ from experiment_setup import build_estimator
 from active_learning.simple_update import entropy
 
 
+torch.cuda.set_device(0)
+
+
 config_mnist = {
-    'val_size': 5_000,
-    'train_size': 1_024,
+    'train_size': 50_000,
+    'val_size': 10_000,
     'model_type': 'simple_conv',
     'batch_size': 256,
     'patience': 3,
-    'epochs': 30,
+    'epochs': 100,
     'start_lr': 1e-3,
     'weight_decay': 0.1,
     'reload': False,
-    'nn_runs': 100,
-    'estimators': ['max_prob', 'max_entropy', *DEFAULT_MASKS],
+    'nn_runs': 150,
+    # 'estimators': ['max_prob', 'max_entropy', *DEFAULT_MASKS],
+    'estimators': DEFAULT_MASKS,
     'repeats': 5,
     'name': 'MNIST',
     'prepare_dataset': prepare_mnist,
@@ -47,6 +51,10 @@ config_mnist = {
 
 config_cifar = deepcopy(config_mnist)
 config_cifar.update({
+    'train_size': 50_000,
+    'val_size': 10_000,
+    # 'repeats': 1,
+    # 'estimators': ['basic_bern'],
     'model_type': 'resnet',
     'name': 'CIFAR-10',
     'prepare_dataset': prepare_cifar
@@ -54,13 +62,15 @@ config_cifar.update({
 
 config_svhn = deepcopy(config_mnist)
 config_svhn.update({
+    'train_size': 50_000,
+    'val_size': 10_000,
     'model_type': 'resnet',
     'name': 'SVHN',
     'prepare_dataset': prepare_svhn
 })
 
-# configs = [config_mnist, config_cifar, config_svhn]
-configs = [config_mnist]
+configs = [config_cifar, config_mnist, config_svhn]
+label = 'ratio_2'
 
 
 def benchmark_uncertainty(config):
@@ -68,8 +78,12 @@ def benchmark_uncertainty(config):
     plt.figure(figsize=(10, 8))
     for i in range(config['repeats']):
         x_set, y_set, x_val, y_val, train_tfms = config['prepare_dataset'](config)
-        _, x_train, _, y_train = train_test_split(
-            x_set, y_set, test_size=config['train_size'], stratify=y_set)
+
+        if len(x_set) > config['train_size']:
+            _, x_train, _, y_train = train_test_split(
+                x_set, y_set, test_size=config['train_size'], stratify=y_set)
+        else:
+            x_train, y_train = x_set, y_set
 
         train_ds = ImageArrayDS(x_train, y_train, train_tfms)
         val_ds = ImageArrayDS(x_val, y_val)
@@ -99,19 +113,21 @@ def benchmark_uncertainty(config):
             if i == config['repeats'] - 1:
                 fpr, tpr, thresholds = roc_curve(mistake, ue, pos_label=1)
                 plt.plot(fpr, tpr, label=name, alpha=0.8)
+                plt.xlabel('FPR')
+                plt.ylabel('TPR')
 
     dir = Path(ROOT_DIR) / 'experiments' / 'data' / 'ood'
     plt.title(f"{config['name']} uncertainty ROC")
     plt.legend()
-    plt.savefig(dir / f"var_roc_{config['name']}_{config['train_size']}")
-    plt.show()
+    plt.savefig(dir / f"var_{label}_roc_{config['name']}_{config['train_size']}_{config['nn_runs']}")
+    # plt.show()
 
     plt.figure(figsize=(10, 8))
     plt.title(f"{config['name']} uncertainty ROC-AUC")
     df = pd.DataFrame(results, columns=['Estimator type', 'ROC-AUC score'])
     sns.boxplot('Estimator type', 'ROC-AUC score', data=df)
-    plt.savefig(dir / f"var_boxplot_{config['name']}_{config['train_size']}")
-    plt.show()
+    plt.savefig(dir / f"var_{label}_boxplot_{config['name']}_{config['train_size']}_{config['nn_runs']}")
+    # plt.show()
 
 
 def calc_ue(model, images, probabilities, estimator_type='max_prob', nn_runs=100):
@@ -124,7 +140,6 @@ def calc_ue(model, images, probabilities, estimator_type='max_prob', nn_runs=100
         estimator = build_estimator('bald_masked', model, dropout_mask=mask, num_classes=10, nn_runs=nn_runs)
         ue = estimator.estimate(images)
         print(ue[:10])
-
     return ue
 
 

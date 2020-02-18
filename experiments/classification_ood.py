@@ -29,10 +29,11 @@ from active_learning.simple_update import entropy
 from experiments.utils.visual_datasets import prepare_fashion_mnist
 
 torch.cuda.set_device(1)
+label = 'ratio_2'
 
 config_mnist = {
+    'train_size': 50_000,
     'val_size': 5_000,
-    'train_size': 5_000,
     'model_type': 'simple_conv',
     'batch_size': 256,
     'patience': 3,
@@ -40,8 +41,9 @@ config_mnist = {
     'start_lr': 1e-3,
     'weight_decay': 0.1,
     'reload': False,
-    'nn_runs': 100,
-    'estimators': ['max_prob', 'max_entropy', *DEFAULT_MASKS],
+    'nn_runs': 150,
+    # 'estimators': ['max_prob', 'max_entropy', *DEFAULT_MASKS],
+    'estimators': DEFAULT_MASKS,
     'repeats': 5,
     'name': 'MNIST',
     'prepare_dataset': prepare_mnist,
@@ -50,13 +52,15 @@ config_mnist = {
 
 config_cifar = deepcopy(config_mnist)
 config_cifar.update({
+    'train_size': 50_000,
+    'val_size': 5_000,
     'model_type': 'resnet',
     'name': 'CIFAR-10',
     'prepare_dataset': prepare_cifar,
     'alternative_dataset': prepare_svhn,
 })
 
-configs = [config_cifar]
+configs = [config_mnist, config_cifar]
 
 
 def benchmark_ood(config):
@@ -64,8 +68,12 @@ def benchmark_ood(config):
     plt.figure(figsize=(10, 8))
     for i in range(config['repeats']):
         x_set, y_set, x_val, y_val, train_tfms = config['prepare_dataset'](config)
-        _, x_train, _, y_train = train_test_split(
-            x_set, y_set, test_size=config['train_size'], stratify=y_set)
+
+        if len(x_set) > config['train_size']:
+            _, x_train, _, y_train = train_test_split(
+                x_set, y_set, test_size=config['train_size'], stratify=y_set)
+        else:
+            x_train, y_train = x_set, y_set
 
         _, _, x_alt, y_alt, _ = config['alternative_dataset'](config)
 
@@ -98,18 +106,20 @@ def benchmark_ood(config):
             if i == config['repeats'] - 1:
                 fpr, tpr, thresholds = roc_curve(y, ue, pos_label=1)
                 plt.plot(fpr, tpr, label=name, alpha=0.8)
+                plt.xlabel('FPR')
+                plt.ylabel('TPR')
 
     dir = Path(ROOT_DIR) / 'experiments' / 'data' / 'ood'
     plt.title(f"{config['name']} ood detection ROC")
     plt.legend()
-    plt.savefig(dir / f"ood_roc_{config['name']}_{config['train_size']}")
+    plt.savefig(dir / f"var_{label}_ood_roc_{config['name']}_{config['train_size']}_{config['nn_runs']}")
     # plt.show()
 
     plt.figure(figsize=(10, 8))
     plt.title(f"{config['name']} ood detection ROC-AUC")
     df = pd.DataFrame(results, columns=['Estimator type', 'ROC-AUC score'])
     sns.boxplot('Estimator type', 'ROC-AUC score', data=df)
-    plt.savefig(dir / f"ood_boxplot_{config['name']}_{config['train_size']}")
+    plt.savefig(dir / f"var_{label}_ood_boxplot_{config['name']}_{config['train_size']}_{config['nn_runs']}")
     # plt.show()
 
 
