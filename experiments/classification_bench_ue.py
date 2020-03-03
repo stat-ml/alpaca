@@ -42,7 +42,6 @@ config_mnist = {
     'weight_decay': 0.1,
     'reload': False,
     'nn_runs': 150,
-    # 'estimators': ['max_prob', 'max_entropy', *DEFAULT_MASKS],
     'estimators': DEFAULT_MASKS,
     'repeats': 5,
     'name': 'MNIST',
@@ -69,9 +68,8 @@ config_svhn.update({
     'prepare_dataset': prepare_svhn
 })
 
-# configs = [config_cifar, config_mnist, config_svhn]
-configs = [config_svhn]
-label = 'ratio_3'
+configs = [config_cifar, config_mnist, config_svhn]
+label = 'ratio_4'
 
 
 def benchmark_uncertainty(config):
@@ -120,15 +118,29 @@ def benchmark_uncertainty(config):
     dir = Path(ROOT_DIR) / 'experiments' / 'data' / 'ood'
     plt.title(f"{config['name']} uncertainty ROC")
     plt.legend()
-    plt.savefig(dir / f"var_{label}_roc_{config['name']}_{config['train_size']}_{config['nn_runs']}")
+    file = f"var_{label}_roc_{config['name']}_{config['train_size']}_{config['nn_runs']}"
+    plt.savefig(dir / file)
     # plt.show()
 
-    plt.figure(figsize=(10, 8))
-    plt.title(f"{config['name']} uncertainty ROC-AUC")
     df = pd.DataFrame(results, columns=['Estimator type', 'ROC-AUC score'])
-    sns.boxplot('Estimator type', 'ROC-AUC score', data=df)
-    plt.savefig(dir / f"var_{label}_boxplot_{config['name']}_{config['train_size']}_{config['nn_runs']}")
-    # plt.show()
+    df = df.replace('mc_dropout', 'MC dropout')
+    df = df.replace('decorrelating_sc', 'decorrelation')
+    df = df[df['Estimator type'] != 'k_dpp_noisereg']
+    print(df)
+    fig, ax = plt.subplots(figsize=(8, 6))
+    plt.subplots_adjust(left=0.2)
+
+    with sns.axes_style('whitegrid'):
+        sns.boxplot(data=df, x='ROC-AUC score', y='Estimator type', orient='h', ax=ax)
+
+    ax.yaxis.grid(True)
+    ax.xaxis.grid(True)
+
+    plt.title(f'{config["name"]} wrong prediction ROC-AUC')
+
+    file = f"var_{label}_boxplot_{config['name']}_{config['train_size']}_{config['nn_runs']}"
+    plt.savefig(dir / file)
+    df.to_csv(dir / file + '.csv')
 
 
 def calc_ue(model, images, probabilities, estimator_type='max_prob', nn_runs=100):

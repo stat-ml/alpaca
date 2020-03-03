@@ -8,7 +8,7 @@ from dppy.finite_dpps import FiniteDPP
 
 
 # DEFAULT_MASKS = ['basic_bern', 'decorrelating_sc', 'dpp', 'k_dpp', 'k_dpp_noisereg']
-DEFAULT_MASKS = ['mc_dropout', 'decorrelating_sc', 'dpp', 'k_dpp', 'k_dpp_noisereg']
+DEFAULT_MASKS = ['mc_dropout', 'decorrelating_sc', 'dpp', 'k_dpp']
 
 
 # It's better to use this function to get the mask then call them directly

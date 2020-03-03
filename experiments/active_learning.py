@@ -108,7 +108,8 @@ def main(config):
     plot_metric(val_accuracy, config)
 
 
-sns.set_style("darkgrid")
+
+# sns.set_style("darkgrid")
 
 
 def train_classifier(model, config, x_train, y_train, x_val, y_val, train_tfms=None):
@@ -139,8 +140,10 @@ def plot_metric(metrics, config, title=None):
     sns.lineplot('Step', 'Accuracy', hue='Method', data=df)
     # plt.legend(loc='upper left')
 
-    filename = f"{config['name']}_{config['model_type']}_{config['start_size']}_{config['step_size']}.png"
-    plt.savefig(Path(ROOT_DIR)/'experiments'/'data'/'al'/filename)
+    filename = f"{config['name']}_{config['model_type']}_{config['start_size']}_{config['step_size']}"
+    file = Path(ROOT_DIR) / 'experiments' / 'data' / 'al' / filename
+    plt.savefig(file)
+    df.to_csv(filename + '.csv')
     plt.show()
 
 
