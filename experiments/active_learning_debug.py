@@ -3,6 +3,7 @@ import sys
 sys.path.append('..')
 
 import torch
+import torch.nn.functional as F
 from sklearn.model_selection import train_test_split
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,7 +18,7 @@ from dataloader.builder import build_dataset
 from uncertainty_estimator.bald import Bald, BaldMasked
 from uncertainty_estimator.masks import build_masks, build_mask, DEFAULT_MASKS
 from experiments.utils.fastai import ImageArrayDS, Inferencer
-from experiments.active_learning import update_set
+from active_learning.simple_update import update_set, entropy
 
 
 # == Place to develop, experiment and debug new methods of active learning == #
@@ -56,8 +57,9 @@ data = ImageDataBunch.create(train_ds, val_ds, bs=256)
 
 loss_func = torch.nn.CrossEntropyLoss()
 
+np.set_printoptions(threshold=sys.maxsize, suppress=True)
 
-# model = AnotherConv()
+model = AnotherConv()
 # model = resnet_masked(pretrained=True)
 # model = resnet_linear(pretrained=True, dropout_rate=0.5, freeze=False)
 
@@ -69,10 +71,39 @@ loss_func = torch.nn.CrossEntropyLoss()
 # else:
 #     learner.fit(10, 1e-3, wd=0.02)
 #     torch.save(model.state_dict(), model_path)
-
-# images = torch.FloatTensor(x_val)# .to('cuda')
-# inferencer = Inferencer(model)
 #
+# images = torch.FloatTensor(x_val)# .to('cuda')
+#
+# inferencer = Inferencer(model)
+# predictions = F.softmax(inferencer(images), dim=1).detach().cpu().numpy()[:10]
+
+
+repeats = 3
+methods = ['goy', 'mus', 'cosher']
+from random import random
+
+results = []
+for _ in range(repeats):
+    start = 0.1 * random()
+    for method in methods:
+        accuracies = [start]
+        current = start
+        for i in range(10):
+            current += 0.1*random()
+            accuracies.append(current)
+        records = list(zip(accuracies, range(len(accuracies)), [method] * len(accuracies)))
+        results.extend(records)
+
+import pandas as pd
+import seaborn as sns
+df = pd.DataFrame(results, columns=['accuracy', 'step', 'method'])
+sns.lineplot('step', 'accuracy', hue='method', data=df)
+plt.show()
+
+
+# idxs = np.argsort(entropies)[::-1][:10]
+# print(idxs)
+
 # mask = build_mask('k_dpp')
 # estimator = BaldMasked(inferencer, dropout_mask=mask, num_classes=10, nn_runs=nn_runs)
 # estimations = estimator.estimate(images)
@@ -80,47 +111,9 @@ loss_func = torch.nn.CrossEntropyLoss()
 
 
 
-# Start data split
-x_set, x_train_init, y_set, y_train_init = train_test_split(x_set, y_set, test_size=start_size, stratify=y_set)
-_, x_pool_init, _, y_pool_init = train_test_split(x_set, y_set, test_size=pool_size, stratify=y_set)
-# x_pool_init, y_pool_init = x_set, y_set
-train_tfms = [*rand_pad(4, 32), flip_lr(p=0.5)]  # Transformation to augment images
-
-loss_func = torch.nn.CrossEntropyLoss()
 
 
-model = AnotherConv()
-# Active learning
-x_pool, y_pool = np.copy(x_pool_init), np.copy(y_pool_init)
-x_train, y_train = np.copy(x_train_init), np.copy(y_train_init)
-
-method = 'k_dpp_noisereg'
 
 
-build_mask('k_dpp_noisereg', noise_level=0.1)
-
-for i in range(steps):
-    print(f"Step {i+1}, train size: {len(x_train)}")
-    train_ds = ImageArrayDS(x_train, y_train, train_tfms)
-    val_ds = ImageArrayDS(x_val, y_val)
-    data = ImageDataBunch.create(train_ds, val_ds, bs=256)
-
-    learner = Learner(data, model, metrics=accuracy, loss_func=loss_func)
-    learner.fit(1, 1e-3, wd=1e-3)
-
-    if i != steps - 1:
-        x_pool, x_train, y_pool, y_train = update_set(
-            x_pool, x_train, y_pool, y_train, method=method, model=model, step=step_size)
 
 
-# mcd = estimator.last_mcd_runs().reshape(20, nn_runs*10)
-# dpp = FiniteDPP('likelihood', L=np.corrcoef(mcd))
-# idxs = set()
-# while len(idxs) < step_size:
-#     dpp.sample_exact()
-#     idxs.update(dpp.list_of_samples[-1])
-# idxs = list(idxs)[:step_size]
-#
-# # idxs = np.argsort(estimations)[::-1]
-# print(idxs)
-# print(estimations[idxs])
