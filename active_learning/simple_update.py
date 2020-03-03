@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from dppy.finite_dpps import FiniteDPP
 
 
-from experiments.utils.fastai import Inferencer
+from utils import Inferencer
 from experiment_setup import build_estimator
 from uncertainty_estimator.masks import build_mask
 
