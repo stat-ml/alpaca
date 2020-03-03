@@ -1,7 +1,6 @@
 from os import path
 
 import pandas as pd
-import numpy as np
 from sklearn.model_selection import train_test_split
 
 from experiment_setup import ROOT_DIR

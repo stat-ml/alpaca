@@ -1,5 +1,5 @@
 import torch
-from uncertainty_estimator.masks import BasicMask
+from alpaca.uncertainty_estimator.masks import BasicMask
 
 
 def test_basic_mask():

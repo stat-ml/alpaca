@@ -6,7 +6,7 @@ from dppy.finite_dpps import FiniteDPP
 
 from utils import Inferencer
 from experiment_setup import build_estimator
-from uncertainty_estimator.masks import build_mask
+from alpaca.uncertainty_estimator.masks import build_mask
 
 
 def update_set(x_pool, x_train, y_pool, y_train, step, method='basic_bern', model=None, nn_runs=100):

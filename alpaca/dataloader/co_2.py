@@ -5,7 +5,7 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 
 from experiment_setup import ROOT_DIR
-from dataloader.downloader import download
+from alpaca.dataloader import download
 
 URL = 'http://scrippsco2.ucsd.edu/assets/data/atmospheric/stations/in_situ_co2/monthly/monthly_in_situ_co2_mlo.csv'
 
