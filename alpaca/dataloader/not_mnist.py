@@ -3,7 +3,7 @@ from pathlib import Path
 
 import tarfile
 
-from experiment_setup import ROOT_DIR
+from experiments.experiment_setup import ROOT_DIR
 from .saver import DataSaver
 from .downloader import download
 

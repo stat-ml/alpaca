@@ -14,6 +14,7 @@ setuptools.setup(
     url="https://github.com/premolab/alpaca",
     packages=setuptools.find_packages(),
     license="Apache License 2.0",
+    install_requires=setuptools.load_requirements("requirements/requirements.txt"),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
