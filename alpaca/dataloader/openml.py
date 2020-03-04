@@ -4,13 +4,13 @@ from sklearn.model_selection import train_test_split
 from sklearn.datasets import fetch_openml
 import numpy as np
 
-from experiment_setup import ROOT_DIR
+from .config import DATA_DIR
 from .saver import DataSaver
 
 
 class Openml:
     def __init__(self, name, val_size=0.2):
-        cache_dir = path.join(ROOT_DIR, f'dataloader/data/{name}')
+        cache_dir = path.join(DATA_DIR, f'dataloader/data/{name}')
         self.saver = DataSaver(cache_dir)
         self.val_size = val_size
         self.name = name

@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 import zipfile
 
-from experiment_setup import ROOT_DIR
+from .config import DATA_DIR
 from .saver import DataSaver
 from .downloader import download
 
@@ -17,7 +17,7 @@ class NavalPropulsionData:
     """Load/provides naval propulsion dataset"""
     def __init__(self, use_cache=False, val_split=0.2):
         self.use_cache = use_cache
-        cache_dir = path.join(ROOT_DIR, 'dataloader/data/naval_propulsion')
+        cache_dir = path.join(DATA_DIR, 'dataloader/data/naval_propulsion')
         self.saver = DataSaver(cache_dir)
         self.val_split = val_split
         self._build_dataset(cache_dir)

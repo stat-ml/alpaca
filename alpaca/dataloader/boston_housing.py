@@ -3,7 +3,7 @@ from os import path
 import pandas as pd
 import numpy as np
 
-from experiment_setup import ROOT_DIR
+from .config import DATA_DIR
 from .saver import DataSaver
 from .downloader import download
 from sklearn.model_selection import train_test_split
@@ -16,7 +16,7 @@ class BostonHousingData:
     """Load/provides boston housing dataset"""
     def __init__(self, use_cache=False, val_split=0.2):
         self.use_cache = use_cache
-        cache_dir = path.join(ROOT_DIR, 'dataloader/data/boston_housing')
+        cache_dir = path.join(DATA_DIR, 'dataloader/data/boston_housing')
         self.saver = DataSaver(cache_dir)
         self.column_names = [
             'CRIM', 'ZN', 'INDUS', 'CHAS', 'NOX', 'RM', 'AGE',

@@ -4,15 +4,15 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import numpy as np
 
-from experiment_setup import ROOT_DIR
-from alpaca.dataloader import download
+from .config import DATA_DIR
+from .downloader import download
 
 URL = 'http://scrippsco2.ucsd.edu/assets/data/atmospheric/stations/in_situ_co2/monthly/monthly_in_situ_co2_mlo.csv'
 
 
 class CO2Data:
     def __init__(self, val_split=0.2):
-        self.cache_dir = path.join(ROOT_DIR, 'dataloader/data/co_2', )
+        self.cache_dir = path.join(DATA_DIR, 'dataloader/data/co_2', )
         self.val_split = val_split
         self._build_dataset(self.cache_dir)
 

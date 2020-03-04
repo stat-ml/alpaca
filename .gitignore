@@ -3,3 +3,6 @@
 .ipynb_checkpoints
 alpaca/reference
 logdir
+build
+dist
+alpaca_ml.egg-info
