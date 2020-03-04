@@ -1,6 +1,7 @@
 import torch
 from scipy.special import softmax
 import numpy as np
+from .masks import build_mask
 
 
 class Bald:
@@ -28,7 +29,7 @@ class BaldMasked:
     """
     Estimate uncertainty for samples with MCDUE approach
     """
-    # TODO: var_ration to separate class!!
+    # TODO: different acquisition to separate classes, it's not BALD
     def __init__(
             self, net, nn_runs=100, dropout_mask=None, dropout_rate=.5,
             num_classes=2, keep_runs=False, acquisition='var_ratio'):
@@ -36,6 +37,8 @@ class BaldMasked:
         self.nn_runs = nn_runs
         self.num_classes = num_classes
         self.dropout_rate = dropout_rate
+        if isinstance(dropout_mask, str):
+            dropout_mask = build_mask(dropout_mask)
         self.dropout_mask = dropout_mask
         self.keep_runs = keep_runs
         self._mcd_runs = np.array([])
