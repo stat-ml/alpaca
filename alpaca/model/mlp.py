@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from alpaca.dataloader import loader
+from alpaca.dataloader.custom_dataset import loader
 
 
 class BaseMLP(nn.Module):

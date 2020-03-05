@@ -36,10 +36,11 @@ class BostonHousingData:
         data_path = download(cache_dir, 'housing.data', URL)
         self.df = pd.read_table(data_path, names=self.column_names, header=None, delim_whitespace=True)
         table = self.df.to_numpy()
-        train, val = train_test_split(table, test_size=self.val_split, shuffle=True)
-        self.data = {
-            'train': train,
-            'val': val,
-            'all': np.concatenate((train, val))
-        }
+
+        if self.val_split != 0:
+            train, val = train_test_split(table, test_size=self.val_split, shuffle=True)
+        else:
+            train, val = table, []
+
+        self.data = {'train': train, 'val': val}
 

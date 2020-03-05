@@ -39,12 +39,12 @@ class CCPPData:
         self.df = pd.read_excel(file_path)
 
         table = self.df.to_numpy()
-        train, val = train_test_split(table, test_size=self.val_split, shuffle=True)
-        self.data = {
-            'train': train,
-            'val': val,
-            'all': np.concatenate((train, val))
-        }
+
+        if self.val_split != 0:
+            train, val = train_test_split(table, test_size=self.val_split, shuffle=True)
+        else:
+            train, val = table, []
+        self.data = {'train': train, 'val': val}
 
 
 if __name__ == '__main__':
