@@ -7,7 +7,6 @@ from scipy.special import softmax
 from dppy.finite_dpps import FiniteDPP
 
 
-# DEFAULT_MASKS = ['basic_bern', 'decorrelating_sc', 'dpp', 'k_dpp', 'k_dpp_noisereg']
 DEFAULT_MASKS = ['mc_dropout', 'decorrelating_sc', 'dpp', 'k_dpp']
 
 
@@ -85,7 +84,7 @@ class DecorrelationMask:
         self.layer_correlations = {}
 
 
-ATTEMPTS = 10
+ATTEMPTS = 30
 
 
 class DPPMask:
@@ -101,6 +100,8 @@ class DPPMask:
             x_matrix = x.cpu().numpy()
 
             self.x_matrix = x_matrix
+            micro = 1e-12
+            x_matrix += np.random.random(x_matrix.shape) * micro  # for computational stability
             correlations = np.corrcoef(x_matrix.T)
             self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': correlations})
             self.layer_correlations[layer_num] = correlations
