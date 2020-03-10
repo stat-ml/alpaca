@@ -15,7 +15,7 @@ def load_requirements(filename):
 
 setuptools.setup(
     name="alpaca-ml",
-    version="0.0.8",
+    version="0.0.10",
     author="Maxim Panov and Evgenii Tsymbalov and Kirill Fedyanin",
     author_email="k.fedyanin@skoltech.ru",
     description="Active learning utilities for machine learning applications",
