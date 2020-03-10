@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from .masks import build_mask
 
 
 class MCDUE:
@@ -30,6 +31,8 @@ class MCDUEMasked:
         self.net = net
         self.nn_runs = nn_runs
         self.dropout_rate = dropout_rate
+        if isinstance(dropout_mask, str):
+            dropout_mask = build_mask(dropout_mask)
         self.dropout_mask = dropout_mask
         self.keep_runs = keep_runs
         self._mcd_runs = np.array([])

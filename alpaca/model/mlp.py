@@ -3,14 +3,17 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from alpaca.dataloader import loader
+from alpaca.dataloader.custom_dataset import loader
 
 
 class BaseMLP(nn.Module):
-    def __init__(self, layer_sizes, activation, postprocessing=lambda x: x):
+    def __init__(self, layer_sizes, activation, postprocessing=lambda x: x, device=None):
         super(BaseMLP, self).__init__()
 
-        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        if device is None:
+            self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        else:
+            self.device = device
 
         self.layer_sizes = layer_sizes
         self.fcs = []
@@ -23,19 +26,18 @@ class BaseMLP(nn.Module):
         self.double()
         self.to(self.device)
 
-    def forward(self, x, dropout_rate=0, train=False, dropout_mask=None):
-        out = torch.DoubleTensor(x).to(self.device) if isinstance(x, np.ndarray) else x
-        out = self.activation(self.fcs[0](out))
+    def forward(self, x, dropout_rate=0, dropout_mask=None):
+        x = self.activation(self.fcs[0](x))
 
         for layer_num, fc in enumerate(self.fcs[1:-1]):
-            out = self.activation(fc(out))
+            x = self.activation(fc(x))
             if dropout_mask is None:
-                out = nn.Dropout(dropout_rate)(out)
+                x = nn.Dropout(dropout_rate)(x)
             else:
-                out = out*dropout_mask(out, dropout_rate, layer_num)
-        out = self.fcs[-1](out)
-        out = self.postprocessing(out)
-        return out if train else out.detach()
+                x = x*dropout_mask(x, dropout_rate, layer_num)
+        x = self.fcs[-1](x)
+        x = self.postprocessing(x)
+        return x
 
     def fit(
             self, train_set, val_set, epochs=10000, verbose=True,
@@ -53,7 +55,7 @@ class BaseMLP(nn.Module):
                 labels = labels.to(self.device)
 
                 # Forward pass
-                outputs = self(points, train=True, dropout_rate=dropout_rate)
+                outputs = self(points, dropout_rate=dropout_rate)
                 loss = self.criterion(outputs, labels)
 
                 # Backward and optimize
@@ -96,15 +98,15 @@ class BaseMLP(nn.Module):
 
 
 class MLP(BaseMLP):
-    def __init__(self, layer_sizes, l2_reg=1e-5, postprocessing=None, loss=nn.MSELoss,
-                 optimizer=None, activation=None):
+    def __init__(self, layer_sizes, postprocessing=None, loss=nn.MSELoss,
+                 optimizer=None, activation=None, **kwargs):
         if postprocessing is None:
             postprocessing = lambda x: x
 
         if activation is None:
             activation = F.celu
 
-        super(MLP, self).__init__(layer_sizes, activation=activation, postprocessing=postprocessing)
+        super(MLP, self).__init__(layer_sizes, activation=activation, postprocessing=postprocessing, **kwargs)
 
         self.criterion = loss()
 
