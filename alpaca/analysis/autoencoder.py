@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-from alpaca.dataloader import loader
+from alpaca.dataloader.utils import loader
 
 
 class AutoEncoder(nn.Module):
