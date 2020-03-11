@@ -1,5 +1,5 @@
 ## Alpaca
-![alpaca_logo](examples/alpaca.png)
+![alpaca_logo](examples/figures/alpaca.png)
 
 Package for active learning and uncertainty quantification in neural nets.
 
