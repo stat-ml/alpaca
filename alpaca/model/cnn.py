@@ -15,7 +15,7 @@ class SimpleConv(nn.Module):
         self.linear_size = 12*12*32
         self.fc1 = nn.Linear(self.linear_size, 256)
         self.dropout = nn.Dropout(0.5)
-        self.fc2 = nn.Linear(256, 10)
+        self.fc2 = nn.Linear(256, num_classes)
 
     def forward(self, x, dropout_rate=0., dropout_mask=None):
         x = self.activation(self.conv1(x))

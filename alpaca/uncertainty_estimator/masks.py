@@ -7,7 +7,7 @@ from scipy.special import softmax
 from dppy.finite_dpps import FiniteDPP
 
 
-DEFAULT_MASKS = ['mc_dropout', 'decorrelating_sc', 'dpp', 'k_dpp']
+DEFAULT_MASKS = ['mc_dropout', 'decorrelating_sc', 'dpp', 'k_dpp', 'ht_dpp', 'ht_k_dpp']
 
 
 # It's better to use this function to get the mask then call them directly
@@ -19,7 +19,9 @@ def build_masks(names=None, **kwargs):
         'decorrelating_sc': DecorrelationMask(scaling=True, dry_run=False),
         'dpp': DPPMask(),
         'k_dpp': KDPPMask(),
-        'k_dpp_noisereg': KDPPMask(noise_level=kwargs.get('noise_level', 1e-2))
+        'k_dpp_noisereg': KDPPMask(noise_level=kwargs.get('noise_level', 1e-2)),
+        'ht_dpp': DPPMask(ht_norm=True),
+        'ht_k_dpp': KDPPMask(ht_norm=True)
     }
     if names is None:
         return masks
@@ -88,11 +90,14 @@ ATTEMPTS = 30
 
 
 class DPPMask:
-    def __init__(self):
+    def __init__(self, ht_norm=False):
         self.dpps = {}
         self.layer_correlations = {}  # keep for debug purposes
         # Flag for uncertainty estimator to make first run without taking the result
         self.dry_run = True
+
+        self.ht_norm = ht_norm
+        self.norm = {}
 
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         if layer_num not in self.layer_correlations:
@@ -105,6 +110,14 @@ class DPPMask:
             correlations = np.corrcoef(x_matrix.T)
             self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': correlations})
             self.layer_correlations[layer_num] = correlations
+
+            if self.ht_norm:
+                L = x.data.new(correlations)
+                # if self.likelihood:
+                E = x.data.new(np.eye(len(correlations)))
+                K = torch.mm(L, torch.inverse(L + E))
+
+                self.norm[layer_num] = torch.reciprocal(torch.diag(K))  # / len(correlations)
 
             return x.data.new(x.data.size()[-1]).fill_(1)
 
@@ -119,7 +132,11 @@ class DPPMask:
 
         mask_len = x.data.size()[-1]
         mask = x.data.new(mask_len).fill_(0)
-        mask[ids] = mask_len/len(ids)
+        # mask[ids] = mask_len/len(ids)
+        if self.ht_norm:
+            mask[ids] = self.norm[layer_num][ids]
+        else:
+            mask[ids] = mask_len / len(ids)
 
         return x.data.new(mask)
 
@@ -128,7 +145,7 @@ class DPPMask:
 
 
 class KDPPMask:
-    def __init__(self, noise_level=None, tol_level=1e-3):
+    def __init__(self, noise_level=None, tol_level=1e-3, ht_norm=False):
         self.layer_correlations = {}
         self.dry_run = True
         self.dpps = {}
@@ -136,6 +153,9 @@ class KDPPMask:
         self.ranks_history = defaultdict(list)
         self.noise_level = noise_level
         self.tol_level = tol_level
+
+        self.ht_norm = ht_norm
+        self.norm = {}
 
     def _rank(self, dpp):
         N = dpp.eig_vecs.shape[0]
@@ -158,6 +178,14 @@ class KDPPMask:
             self.ranks_history[layer_num].append(self.ranks[layer_num])
             self.layer_correlations[layer_num] = correlations
 
+            if self.ht_norm:
+                L = x.data.new(correlations)
+                # if self.likelihood:
+                E = x.data.new(np.eye(len(correlations)))
+                K = torch.mm(L, torch.inverse(L + E))
+
+                self.norm[layer_num] = torch.reciprocal(torch.diag(K))  # / len(correlations)
+
             return x.data.new(x.data.size()[-1]).fill_(1)
 
         mask = x.data.new(x.data.size()[-1]).fill_(0)
@@ -166,7 +194,12 @@ class KDPPMask:
 
         ids = self.dpps[layer_num].list_of_samples[-1]
 
-        mask[ids] = 1 / (1 - dropout_rate + 1e-10)
+        mask_len = x.data.size()[-1]
+        if self.ht_norm:
+            mask[ids] = self.norm[layer_num][ids]
+        else:
+            mask[ids] = mask_len / len(ids)
+            # mask[ids] = 1 / (1 - dropout_rate + 1e-10)
 
         return x.data.new(mask)
 
