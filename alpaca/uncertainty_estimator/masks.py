@@ -16,7 +16,8 @@ def build_masks(names=None, **kwargs):
         'basic_bern': BasicBernoulliMask(),
         'mc_dropout': BasicBernoulliMask(),
         'decorrelating': DecorrelationMask(),
-        'decorrelating_sc': DecorrelationMask(scaling=True, dry_run=False),
+        'decorrelating_sc': DecorrelationMask(scaling=True),
+        'ht_decorrelating': DecorrelationMask(scaling=True, ht_norm=True),
         'dpp': DPPMask(),
         'k_dpp': KDPPMask(),
         'k_dpp_noisereg': KDPPMask(noise_level=kwargs.get('noise_level', 1e-2)),
@@ -41,25 +42,33 @@ class BasicBernoulliMask:
             raise ValueError("dropout probability has to be between 0 and 1, "
                              "but got {}".format(p))
 
-        noise = self._make_noise(x)
-        if p == 0:
-            noise.fill_(0)
-        else:
+        noise = torch.zeros(x.shape[-1]).to(x.device)
+        # noise = self._make_noise(x)
+        if p > 0:
             noise.bernoulli_(p).div_(p)
-
-        noise = noise.expand_as(x)
+        # noise = noise.expand_as(x)
         return noise
 
-    @staticmethod
-    def _make_noise(input):
-        return input.new().resize_as_(input)
+    # @staticmethod
+    # def _make_noise(input):
+    #     return input.new().resize_as_(input)
+
+
+def mc_probability(prob, k, repeats=1000):
+    results = np.zeros((repeats, len(prob)))
+    for i in range(repeats):
+        ids = np.random.choice(len(prob), k, p=prob, replace=False)
+        results[i, ids] = 1
+    return np.sum(results, axis=0) / repeats
 
 
 class DecorrelationMask:
-    def __init__(self, scaling=False, dry_run=True):
+    def __init__(self, scaling=False, dry_run=True, ht_norm=False):
         self.layer_correlations = {}
         self.scaling = scaling  # use adaptive scaling before softmax
         self.dry_run = dry_run
+        self.ht_norm = ht_norm
+        self.norm = {}
 
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         if layer_num not in self.layer_correlations:
@@ -72,13 +81,26 @@ class DecorrelationMask:
             if self.scaling:
                 scores = 4 * scores / max(scores)
             self.layer_correlations[layer_num] = softmax(scores)
+
+            # if self.ht_norm:
+            if self.ht_norm:
+                k = int(x.shape[-1]*(1-dropout_rate))
+                probabilities = self.layer_correlations[layer_num]
+                samples = max(1000, 4*x.shape[-1])
+                self.norm[layer_num] = np.reciprocal(mc_probability(probabilities, k, samples))
             # Initially we should pass identity mask,
             # otherwise we won't get right correlations for all layers
-            return x.data.new(x.data.size()[-1]).fill_(1)
-        mask = x.data.new(x.data.size()[-1]).fill_(0)
-        k = int(len(mask)*(1-dropout_rate))
-        ids = np.random.choice(len(mask), k, p=self.layer_correlations[layer_num])
-        mask[ids] = 1 / (1 - dropout_rate + 1e-10)
+            return x.data.new(x.data.size()[-2]).fill_(1)
+
+        mask_len = x.data.size()[-1]
+        mask = torch.zeros(mask_len).double().to(x.device)
+        k = int(mask_len*(1-dropout_rate))
+        ids = np.random.choice(len(mask), k, p=self.layer_correlations[layer_num], replace=False)
+
+        if self.ht_norm:
+            mask[ids] = torch.DoubleTensor(self.norm[layer_num][ids])
+        else:
+            mask[ids] = 1 / (1 - dropout_rate)
 
         return x.data.new(mask)
 
@@ -112,12 +134,13 @@ class DPPMask:
             self.layer_correlations[layer_num] = correlations
 
             if self.ht_norm:
-                L = x.data.new(correlations)
-                # if self.likelihood:
-                E = x.data.new(np.eye(len(correlations)))
+                L = torch.DoubleTensor(correlations).cuda()
+                E = torch.eye(len(correlations)).cuda()
                 K = torch.mm(L, torch.inverse(L + E))
 
                 self.norm[layer_num] = torch.reciprocal(torch.diag(K))  # / len(correlations)
+                self.L = L
+                self.K = K
 
             return x.data.new(x.data.size()[-1]).fill_(1)
 
@@ -131,8 +154,7 @@ class DPPMask:
                 break
 
         mask_len = x.data.size()[-1]
-        mask = x.data.new(mask_len).fill_(0)
-        # mask[ids] = mask_len/len(ids)
+        mask = torch.zeros(mask_len).double().cuda()
         if self.ht_norm:
             mask[ids] = self.norm[layer_num][ids]
         else:
@@ -179,22 +201,21 @@ class KDPPMask:
             self.layer_correlations[layer_num] = correlations
 
             if self.ht_norm:
-                L = x.data.new(correlations)
-                # if self.likelihood:
-                E = x.data.new(np.eye(len(correlations)))
+                L = torch.DoubleTensor(correlations).cuda()
+                E = torch.eye(len(correlations)).cuda()
                 K = torch.mm(L, torch.inverse(L + E))
 
                 self.norm[layer_num] = torch.reciprocal(torch.diag(K))  # / len(correlations)
+                self.L = L
+                self.K = K
 
             return x.data.new(x.data.size()[-1]).fill_(1)
 
-        mask = x.data.new(x.data.size()[-1]).fill_(0)
+        mask_len = x.size()[-1]
+        mask = torch.zeros(mask_len).double().cuda()
         k = int(self.ranks[layer_num] * (1 - dropout_rate))
-        self.dpps[layer_num].sample_exact_k_dpp(k)
+        ids = self.dpps[layer_num].sample_exact_k_dpp(k)
 
-        ids = self.dpps[layer_num].list_of_samples[-1]
-
-        mask_len = x.data.size()[-1]
         if self.ht_norm:
             mask[ids] = self.norm[layer_num][ids]
         else:
