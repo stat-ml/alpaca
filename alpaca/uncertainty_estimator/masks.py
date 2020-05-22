@@ -8,7 +8,7 @@ from scipy.special import softmax
 from dppy.finite_dpps import FiniteDPP
 
 
-DEFAULT_MASKS = ['mc_dropout', 'decorrelating_sc', 'dpp', 'k_dpp', 'ht_dpp', 'ht_k_dpp']
+DEFAULT_MASKS = ['mc_dropout', 'ht_decorrelating', 'ht_dpp', 'ht_k_dpp']
 
 
 # It's better to use this function to get the mask then call them directly
