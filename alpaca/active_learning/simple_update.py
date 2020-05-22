@@ -8,11 +8,11 @@ from alpaca.uncertainty_estimator import build_estimator
 from alpaca.uncertainty_estimator.masks import build_mask
 
 
-def update_set(x_pool, x_train, y_pool, y_train, step, method='mc_dropout', model=None, nn_runs=100, task='classification'):
-    if task == 'classification':
-        samples = torch.FloatTensor(x_pool).cuda()
-    else:
-        samples = torch.DoubleTensor(x_pool).cuda()
+def update_set(x_pool, x_train, y_pool, y_train, step, method='mc_dropout', model=None, nn_runs=100, task='classification', samples=None):
+
+    if samples is None:
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        samples = torch.DoubleTensor(x_pool).to(device)
 
     if method == 'random':
         idxs = range(step)
