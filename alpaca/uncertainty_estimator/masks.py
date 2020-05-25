@@ -8,7 +8,7 @@ from scipy.special import softmax
 from dppy.finite_dpps import FiniteDPP
 
 
-DEFAULT_MASKS = ['mc_dropout', 'decorrelating_sc', 'dpp', 'k_dpp', 'ht_dpp', 'ht_k_dpp']
+DEFAULT_MASKS = ['mc_dropout', 'ht_decorrelating', 'ht_dpp', 'ht_k_dpp']
 
 
 # It's better to use this function to get the mask then call them directly
@@ -75,6 +75,7 @@ class DecorrelationMask:
         if layer_num not in self.layer_correlations:
             x_matrix = x.cpu().numpy()
             self.x_matrix = x_matrix
+            mask_len = x.shape[-1]
 
             noise = 1e-8 * np.random.rand(*x_matrix.shape)  # to prevent degeneration
             corrs = np.sum(np.abs(np.corrcoef((x_matrix+noise).T)), axis=1)
@@ -83,27 +84,28 @@ class DecorrelationMask:
                 scores = 4 * scores / max(scores)
             self.layer_correlations[layer_num] = softmax(scores)
 
-            # if self.ht_norm:
             if self.ht_norm:
-                k = int(x.shape[-1]*(1-dropout_rate))
+                # Horvitz-Thopson normalization (1/marginal_prob for each element)
+                k = int(mask_len*(1-dropout_rate))
                 probabilities = self.layer_correlations[layer_num]
                 samples = max(1000, 4*x.shape[-1])
                 self.norm[layer_num] = np.reciprocal(mc_probability(probabilities, k, samples))
             # Initially we should pass identity mask,
             # otherwise we won't get right correlations for all layers
-            return x.data.new(x.data.size()[-2]).fill_(1)
+            mask = torch.ones(mask_len).to(x.device)
+            return mask
 
-        mask_len = x.data.size()[-1]
+        mask_len = x.shape[-1]
         mask = torch.zeros(mask_len).double().to(x.device)
         k = int(mask_len*(1-dropout_rate))
         ids = np.random.choice(len(mask), k, p=self.layer_correlations[layer_num], replace=False)
 
         if self.ht_norm:
-            mask[ids] = torch.DoubleTensor(self.norm[layer_num][ids])
+            mask[ids] = torch.DoubleTensor(self.norm[layer_num][ids]).to(x.device)
         else:
             mask[ids] = 1 / (1 - dropout_rate)
 
-        return x.data.new(mask)
+        return mask
 
     def reset(self):
         self.layer_correlations = {}
@@ -154,7 +156,7 @@ class DPPMask:
             if len(ids):  # We should retry if mask is zero-length
                 break
 
-        mask_len = x.data.size()[-1]
+        mask_len = x.shape[-1]
         mask = torch.zeros(mask_len).double().cuda()
         if self.ht_norm:
             mask[ids] = self.norm[layer_num][ids]
@@ -206,12 +208,12 @@ class KDPPMask:
     def _rank(self, dpp=None, eigen_values=None):
         if eigen_values is None:
             eigen_values = dpp.L_eig_vals
-        # N = dpp.eig_vecs.shape[0]
-        # tol = max(np.max(eigen_values) * N * np.finfo(np.float).eps, self.tol_level)
         rank = np.count_nonzero(eigen_values > self.tol_level)
         return rank
 
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
+        mask_len = x.shape[-1]
+
         if layer_num not in self.layer_correlations:
             x_matrix = x.cpu().numpy()
 
@@ -241,10 +243,10 @@ class KDPPMask:
             # Keep data for debugging
             self.ranks_history[layer_num].append(self.ranks[layer_num])
             self.layer_correlations[layer_num] = correlations
+            mask = torch.ones(mask_len).double().to(x.device)
 
-            return x.data.new(x.data.size()[-1]).fill_(1)
+            return mask
 
-        mask_len = x.size()[-1]
         mask = torch.zeros(mask_len).double().to(x.device)
         k = int(self.ranks[layer_num] * (1 - dropout_rate))
         ids = self.dpps[layer_num].sample_exact_k_dpp(k)
@@ -253,9 +255,8 @@ class KDPPMask:
             mask[ids] = self.norm[layer_num][ids]
         else:
             mask[ids] = mask_len / len(ids)
-            # mask[ids] = 1 / (1 - dropout_rate + 1e-10)
 
-        return x.data.new(mask)
+        return mask
 
     def reset(self):
         self.layer_correlations = {}
