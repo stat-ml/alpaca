@@ -32,7 +32,7 @@ class BaldMasked:
     # TODO: different acquisition to separate classes, it's not BALD
     def __init__(
             self, net, nn_runs=100, dropout_mask=None, dropout_rate=.5,
-            num_classes=2, keep_runs=False, acquisition='var_ratio'):
+            num_classes=2, keep_runs=False, acquisition='bald'):
         self.net = net
         self.nn_runs = nn_runs
         self.num_classes = num_classes
@@ -79,6 +79,9 @@ class BaldMasked:
             return ue
         elif self.acquisition == 'bald':
             return _bald(mcd_runs)
+        elif self.acquisition == 'bald_normed':
+            print('normed bald')
+            return _bald(mcd_runs)
         else:
             raise ValueError
 
@@ -119,3 +122,12 @@ def _bald(logits):
     expected_entropy = np.mean(_entropy(predictions), axis=1)
 
     return predictive_entropy - expected_entropy
+
+
+def _normed_bald(logits):
+    predictions = softmax(logits, axis=-1)
+
+    predictive_entropy = _entropy(np.mean(predictions, axis=1))
+    expected_entropy = np.mean(_entropy(predictions), axis=1)
+
+    return (predictive_entropy - expected_entropy) / predictive_entropy

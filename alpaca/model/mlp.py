@@ -34,7 +34,7 @@ class BaseMLP(nn.Module):
             if dropout_mask is None:
                 x = nn.Dropout(dropout_rate)(x)
             else:
-                x = x*dropout_mask(x, dropout_rate, layer_num)
+                x = x*dropout_mask(x, dropout_rate, layer_num).double()
         x = self.fcs[-1](x)
         x = self.postprocessing(x)
         return x

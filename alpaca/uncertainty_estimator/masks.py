@@ -43,7 +43,7 @@ class BasicBernoulliMask:
             raise ValueError("dropout probability has to be between 0 and 1, "
                              "but got {}".format(p))
 
-        noise = torch.zeros(x.shape[-1]).to(x.device)
+        noise = torch.zeros(x.shape[-1]).double().to(x.device)
         # noise = self._make_noise(x)
         if p > 0:
             noise.bernoulli_(p).div_(p)
@@ -117,10 +117,8 @@ ATTEMPTS = 30
 class DPPMask:
     def __init__(self, ht_norm=False):
         self.dpps = {}
-        self.layer_correlations = {}  # keep for debug purposes
-        # Flag for uncertainty estimator to make first run without taking the result
+        self.layer_correlations = {}  # keep for debug purposes # Flag for uncertainty estimator to make first run without taking the result
         self.dry_run = True
-
         self.ht_norm = ht_norm
         self.norm = {}
 
@@ -138,8 +136,8 @@ class DPPMask:
 
             if self.ht_norm:
                 L = torch.DoubleTensor(correlations).cuda()
-                E = torch.eye(len(correlations)).cuda()
-                K = torch.mm(L, torch.inverse(L + E))
+                I = torch.eye(len(correlations)).double().cuda()
+                K = torch.mm(L, torch.inverse(L + I))
 
                 self.norm[layer_num] = torch.reciprocal(torch.diag(K))  # / len(correlations)
                 self.L = L
@@ -234,7 +232,7 @@ class KDPPMask:
                 nu = get_nu(eigen_values, k)
                 I = torch.eye(len(correlations)).to(x.device)
                 L_tilted = np.exp(nu) * torch.DoubleTensor(correlations).to(x.device)
-                K_tilted = torch.mm(L_tilted, torch.inverse(L_tilted + I))
+                K_tilted = torch.mm(L_tilted, torch.inverse(L_tilted + I)).double()
                 self.dpps[layer_num] = FiniteDPP('correlation', **{"K": K_tilted.detach().cpu().numpy()})
                 self.norm[layer_num] = torch.reciprocal(torch.diag(K_tilted))
                 self.L = L_tilted
