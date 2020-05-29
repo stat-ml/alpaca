@@ -78,10 +78,11 @@ class BaldMasked:
             ue = np.mean(np.std(probabilities, axis=-2), axis=-1)
             return ue
         elif self.acquisition == 'bald':
+            print('bald')
             return _bald(mcd_runs)
         elif self.acquisition == 'bald_normed':
             print('normed bald')
-            return _bald(mcd_runs)
+            return _bald_normed(mcd_runs)
         else:
             raise ValueError
 
@@ -124,7 +125,7 @@ def _bald(logits):
     return predictive_entropy - expected_entropy
 
 
-def _normed_bald(logits):
+def _bald_normed(logits):
     predictions = softmax(logits, axis=-1)
 
     predictive_entropy = _entropy(np.mean(predictions, axis=1))

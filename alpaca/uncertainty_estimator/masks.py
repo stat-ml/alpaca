@@ -23,7 +23,9 @@ def build_masks(names=None, **kwargs):
         'k_dpp': KDPPMask(),
         'k_dpp_noisereg': KDPPMask(noise_level=kwargs.get('noise_level', 1e-2)),
         'ht_dpp': DPPMask(ht_norm=True),
-        'ht_k_dpp': KDPPMask(ht_norm=True)
+        'ht_k_dpp': KDPPMask(ht_norm=True),
+        'cov_dpp': DPPMask(ht_norm=True, covariance=True),
+        'cov_k_dpp': KDPPMask(ht_norm=True, covariance=True)
     }
     if names is None:
         return masks
@@ -115,12 +117,13 @@ ATTEMPTS = 30
 
 
 class DPPMask:
-    def __init__(self, ht_norm=False):
+    def __init__(self, ht_norm=False, covariance=False):
         self.dpps = {}
         self.layer_correlations = {}  # keep for debug purposes # Flag for uncertainty estimator to make first run without taking the result
         self.dry_run = True
         self.ht_norm = ht_norm
         self.norm = {}
+        self.covariance = covariance
 
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         if layer_num not in self.layer_correlations:
@@ -130,13 +133,17 @@ class DPPMask:
             self.x_matrix = x_matrix
             micro = 1e-12
             x_matrix += np.random.random(x_matrix.shape) * micro  # for computational stability
-            correlations = np.corrcoef(x_matrix.T)
-            self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': correlations})
-            self.layer_correlations[layer_num] = correlations
+            if self.covariance:
+                L = np.cov(x_matrix.T)
+            else:
+                L = np.corrcoef(x_matrix.T)
+
+            self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': L})
+            self.layer_correlations[layer_num] = L
 
             if self.ht_norm:
-                L = torch.DoubleTensor(correlations).cuda()
-                I = torch.eye(len(correlations)).double().cuda()
+                L = torch.DoubleTensor(L).cuda()
+                I = torch.eye(len(L)).double().cuda()
                 K = torch.mm(L, torch.inverse(L + I))
 
                 self.norm[layer_num] = torch.reciprocal(torch.diag(K))  # / len(correlations)
@@ -191,7 +198,7 @@ def get_nu(eigen_values, k):
 
 
 class KDPPMask:
-    def __init__(self, noise_level=None, tol_level=1e-3, ht_norm=False):
+    def __init__(self, noise_level=None, tol_level=1e-3, ht_norm=False, covariance=False):
         self.layer_correlations = {}
         self.dry_run = True
         self.dpps = {}
@@ -202,6 +209,8 @@ class KDPPMask:
 
         self.ht_norm = ht_norm
         self.norm = {}
+
+        self.covariance = covariance
 
     def _rank(self, dpp=None, eigen_values=None):
         if eigen_values is None:
@@ -215,23 +224,28 @@ class KDPPMask:
         if layer_num not in self.layer_correlations:
             x_matrix = x.cpu().numpy()
 
-            correlations = np.corrcoef(x_matrix.T)
+            if self.covariance:
+                L = np.cov(x_matrix.T)
+            else:
+                L = np.corrcoef(x_matrix.T)
+
+            print(L)
             if self.noise_level is not None:
-                correlations += self.noise_level * np.eye(len(correlations))
+                L += self.noise_level * np.eye(len(L))
 
             if not self.ht_norm:
-                self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': correlations})
+                self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': L})
                 self.dpps[layer_num].sample_exact()  # to trigger eig values generation
                 self.ranks[layer_num] = self._rank(self.dpps[layer_num])
             else:
-                eigen_values = np.linalg.eigh(correlations)[0]
+                eigen_values = np.linalg.eigh(L)[0]
                 self.ranks[layer_num] = self._rank(eigen_values=eigen_values)
                 k = int(self.ranks[layer_num] * (1 - dropout_rate))
 
                 "Get tilted k-dpp, see amblard2018"
                 nu = get_nu(eigen_values, k)
-                I = torch.eye(len(correlations)).to(x.device)
-                L_tilted = np.exp(nu) * torch.DoubleTensor(correlations).to(x.device)
+                I = torch.eye(len(L)).to(x.device)
+                L_tilted = np.exp(nu) * torch.DoubleTensor(L).to(x.device)
                 K_tilted = torch.mm(L_tilted, torch.inverse(L_tilted + I)).double()
                 self.dpps[layer_num] = FiniteDPP('correlation', **{"K": K_tilted.detach().cpu().numpy()})
                 self.norm[layer_num] = torch.reciprocal(torch.diag(K_tilted))
@@ -240,7 +254,7 @@ class KDPPMask:
 
             # Keep data for debugging
             self.ranks_history[layer_num].append(self.ranks[layer_num])
-            self.layer_correlations[layer_num] = correlations
+            self.layer_correlations[layer_num] = L
             mask = torch.ones(mask_len).double().to(x.device)
 
             return mask
