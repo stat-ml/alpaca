@@ -229,7 +229,6 @@ class KDPPMask:
             else:
                 L = np.corrcoef(x_matrix.T)
 
-            print(L)
             if self.noise_level is not None:
                 L += self.noise_level * np.eye(len(L))
 
