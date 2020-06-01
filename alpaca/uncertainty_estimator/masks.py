@@ -220,6 +220,7 @@ class KDPPMask:
 
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         mask_len = x.shape[-1]
+        k = int(mask_len * (1-dropout_rate))
 
         if layer_num not in self.layer_correlations:
             x_matrix = x.cpu().numpy()
@@ -235,12 +236,8 @@ class KDPPMask:
             if not self.ht_norm:
                 self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': L})
                 self.dpps[layer_num].sample_exact()  # to trigger eig values generation
-                self.ranks[layer_num] = self._rank(self.dpps[layer_num])
             else:
                 eigen_values = np.linalg.eigh(L)[0]
-                self.ranks[layer_num] = self._rank(eigen_values=eigen_values)
-                k = int(self.ranks[layer_num] * (1 - dropout_rate))
-
                 "Get tilted k-dpp, see amblard2018"
                 nu = get_nu(eigen_values, k)
                 I = torch.eye(len(L)).to(x.device)
@@ -252,20 +249,19 @@ class KDPPMask:
                 self.K = K_tilted
 
             # Keep data for debugging
-            self.ranks_history[layer_num].append(self.ranks[layer_num])
             self.layer_correlations[layer_num] = L
             mask = torch.ones(mask_len).double().to(x.device)
 
             return mask
 
         mask = torch.zeros(mask_len).double().to(x.device)
-        k = int(self.ranks[layer_num] * (1 - dropout_rate))
         ids = self.dpps[layer_num].sample_exact_k_dpp(k)
 
         if self.ht_norm:
             mask[ids] = self.norm[layer_num][ids]
         else:
             mask[ids] = mask_len / len(ids)
+        print(mask)
 
         return mask
 
