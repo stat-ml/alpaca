@@ -261,7 +261,6 @@ class KDPPMask:
             mask[ids] = self.norm[layer_num][ids]
         else:
             mask[ids] = mask_len / len(ids)
-        print(mask)
 
         return mask
 
