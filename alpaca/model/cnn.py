@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class SimpleConv(nn.Module):
-    def __init__(self, num_classes=10, activation=None):
+    def __init__(self, num_classes=10, activation=None, dropout_rate=0.5):
         if activation is None:
             self.activation = F.leaky_relu
         else:
@@ -14,7 +14,7 @@ class SimpleConv(nn.Module):
         self.conv2 = nn.Conv2d(16, 32, 3)
         self.linear_size = 12*12*32
         self.fc1 = nn.Linear(self.linear_size, 256)
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(dropout_rate)
         self.fc2 = nn.Linear(256, num_classes)
 
     def forward(self, x, dropout_rate=0., dropout_mask=None):
