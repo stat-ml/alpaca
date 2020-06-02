@@ -25,7 +25,8 @@ def build_masks(names=None, **kwargs):
         'ht_dpp': DPPMask(ht_norm=True),
         'ht_k_dpp': KDPPMask(ht_norm=True),
         'cov_dpp': DPPMask(ht_norm=True, covariance=True),
-        'cov_k_dpp': KDPPMask(ht_norm=True, covariance=True)
+        'cov_k_dpp': KDPPMask(ht_norm=True, covariance=True),
+        'ht_leverages': LeverageScoreMask(ht_norm=True, lambda_=1)
     }
     if names is None:
         return masks
@@ -100,6 +101,52 @@ class DecorrelationMask:
         mask_len = x.shape[-1]
         mask = torch.zeros(mask_len).double().to(x.device)
         k = int(mask_len*(1-dropout_rate))
+        ids = np.random.choice(len(mask), k, p=self.layer_correlations[layer_num], replace=False)
+
+        if self.ht_norm:
+            mask[ids] = torch.DoubleTensor(self.norm[layer_num][ids]).to(x.device)
+        else:
+            mask[ids] = 1 / (1 - dropout_rate)
+
+        return mask
+
+    def reset(self):
+        self.layer_correlations = {}
+
+
+class LeverageScoreMask:
+    def __init__(self, dry_run=True, ht_norm=True, lambda_=1):
+        self.layer_correlations = {}
+        self.dry_run = dry_run
+        self.ht_norm = ht_norm
+        self.norm = {}
+        self.lambda_ = lambda_
+
+    def __call__(self, x, dropout_rate=0.5, layer_num=0):
+        mask_len = x.shape[-1]
+        k = int(mask_len * (1 - dropout_rate))
+
+        if layer_num not in self.layer_correlations:
+            x_matrix = x.cpu().numpy()
+            self.x_matrix = x_matrix
+            K = np.corrcoef(x_matrix.T)
+            I = np.eye(len(K))
+            leverages_matrix = np.dot(K, np.linalg.inv(K+self.lambda_*I))
+            probabilities = np.diagonal(leverages_matrix)
+            probabilities = probabilities / sum(probabilities)
+            self.layer_correlations[layer_num] = probabilities
+
+            if self.ht_norm:
+                # Horvitz-Thopson normalization (1/marginal_prob for each element)
+                probabilities = self.layer_correlations[layer_num]
+                samples = max(1000, 4*x.shape[-1])
+                self.norm[layer_num] = np.reciprocal(mc_probability(probabilities, k, samples))
+            # Initially we should pass identity mask,
+            # otherwise we won't get right correlations for all layers
+            mask = torch.ones(mask_len).to(x.device)
+            return mask
+
+        mask = torch.zeros(mask_len).double().to(x.device)
         ids = np.random.choice(len(mask), k, p=self.layer_correlations[layer_num], replace=False)
 
         if self.ht_norm:
