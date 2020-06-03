@@ -33,7 +33,7 @@ class MLPEnsemble:
     def __call__(self, x, reduction='default', **kwargs):
         if 'dropout_mask' in kwargs and isinstance(kwargs['dropout_mask'], list):
             masks = kwargs.pop('dropout_mask')
-            res = torch.stack([m(x, dropout_mask = dpm, **kwargs) for m, dpm in zip(self.models, masks)])
+            res = torch.stack([m(x, dropout_mask=dpm, **kwargs) for m, dpm in zip(self.models, masks)])
         else:
             res = torch.stack([m(x, **kwargs) for m in self.models])
 
