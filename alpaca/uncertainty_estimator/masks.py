@@ -26,7 +26,8 @@ def build_masks(names=None, **kwargs):
         'ht_k_dpp': KDPPMask(ht_norm=True),
         'cov_dpp': DPPMask(ht_norm=True, covariance=True),
         'cov_k_dpp': KDPPMask(ht_norm=True, covariance=True),
-        'ht_leverages': LeverageScoreMask(ht_norm=True, lambda_=1)
+        'ht_leverages': LeverageScoreMask(ht_norm=True, lambda_=1),
+        'cov_leverages': LeverageScoreMask(ht_norm=True, covariance=True, lambda_=1),
     }
     if names is None:
         return masks
@@ -115,12 +116,13 @@ class DecorrelationMask:
 
 
 class LeverageScoreMask:
-    def __init__(self, dry_run=True, ht_norm=True, lambda_=1):
+    def __init__(self, dry_run=True, ht_norm=True, covariance = False, lambda_=1):
         self.layer_correlations = {}
         self.dry_run = dry_run
         self.ht_norm = ht_norm
         self.norm = {}
         self.lambda_ = lambda_
+        self.covariance = covariance
 
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         mask_len = x.shape[-1]
@@ -129,7 +131,10 @@ class LeverageScoreMask:
         if layer_num not in self.layer_correlations:
             x_matrix = x.cpu().numpy()
             self.x_matrix = x_matrix
-            K = np.corrcoef(x_matrix.T)
+            if self.covariance:
+              K = np.cov(x_matrix.T)
+            else:
+              K = np.corrcoef(x_matrix.T)
             I = np.eye(len(K))
             leverages_matrix = np.dot(K, np.linalg.inv(K+self.lambda_*I))
             probabilities = np.diagonal(leverages_matrix)
