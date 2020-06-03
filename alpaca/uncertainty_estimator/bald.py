@@ -79,10 +79,10 @@ class BaldMasked:
             return ue
         elif self.acquisition == 'bald':
             print('bald')
-            return _bald(mcd_runs)
+            return bald(mcd_runs)
         elif self.acquisition == 'bald_normed':
             print('normed bald')
-            return _bald_normed(mcd_runs)
+            return bald_normed(mcd_runs)
         else:
             raise ValueError
 
@@ -109,26 +109,26 @@ class BaldEnsemble:
         with torch.no_grad():
             logits = np.array(self.ensemble(x_pool, reduction=None).cpu())
 
-        return _bald(np.swapaxes(logits, 0, 1))
+        return bald(np.swapaxes(logits, 0, 1))
 
 
-def _entropy(x):
+def entropy(x):
     return np.sum(-x*np.log(np.clip(x, 1e-8, 1)), axis=-1)
 
 
-def _bald(logits):
+def bald(logits):
     predictions = softmax(logits, axis=-1)
 
-    predictive_entropy = _entropy(np.mean(predictions, axis=1))
-    expected_entropy = np.mean(_entropy(predictions), axis=1)
+    predictive_entropy = entropy(np.mean(predictions, axis=1))
+    expected_entropy = np.mean(entropy(predictions), axis=1)
 
     return predictive_entropy - expected_entropy
 
 
-def _bald_normed(logits):
+def bald_normed(logits):
     predictions = softmax(logits, axis=-1)
 
-    predictive_entropy = _entropy(np.mean(predictions, axis=1))
-    expected_entropy = np.mean(_entropy(predictions), axis=1)
+    predictive_entropy = entropy(np.mean(predictions, axis=1))
+    expected_entropy = np.mean(entropy(predictions), axis=1)
 
     return (predictive_entropy - expected_entropy) / predictive_entropy
