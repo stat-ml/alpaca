@@ -177,33 +177,66 @@ class DPPMask:
         self.norm = {}
         self.covariance = covariance
 
+        ## For batch loaders
+        self.freezed = False
+        self.masks = {}
+
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
+        mask_len = x.shape[-1]
         if layer_num not in self.layer_correlations:
             # warm-up, generatign correlations masks
             x_matrix = x.cpu().numpy()
-
-            self.x_matrix = x_matrix
-            micro = 1e-12
-            x_matrix += np.random.random(x_matrix.shape) * micro  # for computational stability
-            if self.covariance:
-                L = np.cov(x_matrix.T)
+            if self.freezed:
+                self.x_matrices[layer_num].append(x_matrix)
             else:
-                L = np.corrcoef(x_matrix.T)
+                self._setup_dpp(x_matrix, layer_num)
+            return torch.ones(mask_len).to(x.device)
 
-            self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': L})
-            self.layer_correlations[layer_num] = L
+        if self.freezed:
+            mask = self.masks[layer_num]
+        else:
+            mask = self._generate_mask(layer_num, mask_len)
+        return mask
 
-            if self.ht_norm:
-                L = torch.DoubleTensor(L).cuda()
-                I = torch.eye(len(L)).double().cuda()
-                K = torch.mm(L, torch.inverse(L + I))
+    def freeze(self, dry_run):
+        self.freezed = True
+        if dry_run:
+            self.x_matrices = defaultdict(list)
+        else:
+            for layer_num in self.x_matrices.keys():
+                mask_len = len(self.layer_correlations[layer_num])
+                self.masks[layer_num] = self._generate_mask(layer_num, mask_len)
 
-                self.norm[layer_num] = torch.reciprocal(torch.diag(K))  # / len(correlations)
-                self.L = L
-                self.K = K
+    def unfreeze(self, dry_run):
+        self.freezed = False
+        if dry_run:
+            for layer_num, matrices in self.x_matrices.items():
+                x_matrix = np.concatenate(matrices)
+                print(x_matrix.shape)
+                self._setup_dpp(x_matrix, layer_num)
 
-            return x.data.new(x.data.size()[-1]).fill_(1)
+    def _setup_dpp(self, x_matrix, layer_num):
+        self.x_matrix = x_matrix
+        micro = 1e-12
+        x_matrix += np.random.random(x_matrix.shape) * micro  # for computational stability
+        if self.covariance:
+            L = np.cov(x_matrix.T)
+        else:
+            L = np.corrcoef(x_matrix.T)
 
+        self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': L})
+        self.layer_correlations[layer_num] = L
+
+        if self.ht_norm:
+            L = torch.DoubleTensor(L).cuda()
+            I = torch.eye(len(L)).double().cuda()
+            K = torch.mm(L, torch.inverse(L + I))
+
+            self.norm[layer_num] = torch.reciprocal(torch.diag(K))  # / len(correlations)
+            self.L = L
+            self.K = K
+
+    def _generate_mask(self, layer_num, mask_len):
         # sampling nodes ids
         dpp = self.dpps[layer_num]
 
@@ -213,14 +246,13 @@ class DPPMask:
             if len(ids):  # We should retry if mask is zero-length
                 break
 
-        mask_len = x.shape[-1]
         mask = torch.zeros(mask_len).double().cuda()
         if self.ht_norm:
             mask[ids] = self.norm[layer_num][ids]
         else:
             mask[ids] = mask_len / len(ids)
 
-        return x.data.new(mask)
+        return mask
 
     def reset(self):
         self.layer_correlations = {}
@@ -264,11 +296,72 @@ class KDPPMask:
 
         self.covariance = covariance
 
+        ## For batch loaders
+        self.freezed = False
+        self.masks = {}
+        self.ks = {}
+
+    def freeze(self, dry_run):
+        self.freezed = True
+        if dry_run:
+            self.x_matrices = defaultdict(list)
+        else:
+            for layer_num in self.x_matrices.keys():
+                mask_len = len(self.layer_correlations[layer_num])
+                k = self.ks[layer_num]
+                self.masks[layer_num] = self._generate_mask(layer_num, mask_len, k)
+
+    def unfreeze(self, dry_run):
+        self.freezed = False
+        if dry_run:
+            for layer_num, matrices in self.x_matrices.items():
+                x_matrix = np.concatenate(matrices)
+                print(x_matrix.shape)
+                k = self.ks[layer_num]
+                self._setup_dpp(x_matrix, layer_num, k)
+
     def _rank(self, dpp=None, eigen_values=None):
         if eigen_values is None:
             eigen_values = dpp.L_eig_vals
         rank = np.count_nonzero(eigen_values > self.tol_level)
         return rank
+
+    def _setup_dpp(self, x_matrix, layer_num, k):
+        if self.covariance:
+            L = np.cov(x_matrix.T)
+        else:
+            L = np.corrcoef(x_matrix.T)
+
+        if self.noise_level is not None:
+            L += self.noise_level * np.eye(len(L))
+
+        if not self.ht_norm:
+            self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': L})
+            self.dpps[layer_num].sample_exact()  # to trigger eig values generation
+        else:
+            eigen_values = np.linalg.eigh(L)[0]
+            "Get tilted k-dpp, see amblard2018"
+            nu = get_nu(eigen_values, k)
+            I = torch.eye(len(L))
+            L_tilted = np.exp(nu) * torch.DoubleTensor(L)
+            K_tilted = torch.mm(L_tilted, torch.inverse(L_tilted + I)).double()
+            self.dpps[layer_num] = FiniteDPP('correlation', **{"K": K_tilted.detach().cpu().numpy()})
+            self.norm[layer_num] = torch.reciprocal(torch.diag(K_tilted))
+            self.L = L_tilted
+            self.K = K_tilted
+
+        # Keep data for debugging
+        self.layer_correlations[layer_num] = L
+
+    def _generate_mask(self, layer_num, mask_len, k):
+        mask = torch.zeros(mask_len).double()
+        ids = self.dpps[layer_num].sample_exact_k_dpp(k)
+
+        if self.ht_norm:
+            mask[ids] = self.norm[layer_num][ids]
+        else:
+            mask[ids] = mask_len / len(ids)
+        return mask.to(self.device)
 
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         mask_len = x.shape[-1]
@@ -277,42 +370,19 @@ class KDPPMask:
         if layer_num not in self.layer_correlations:
             x_matrix = x.cpu().numpy()
 
-            if self.covariance:
-                L = np.cov(x_matrix.T)
+            self.device = x.device
+            if self.freezed:
+                self.x_matrices[layer_num].append(x_matrix)
             else:
-                L = np.corrcoef(x_matrix.T)
-
-            if self.noise_level is not None:
-                L += self.noise_level * np.eye(len(L))
-
-            if not self.ht_norm:
-                self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': L})
-                self.dpps[layer_num].sample_exact()  # to trigger eig values generation
-            else:
-                eigen_values = np.linalg.eigh(L)[0]
-                "Get tilted k-dpp, see amblard2018"
-                nu = get_nu(eigen_values, k)
-                I = torch.eye(len(L)).to(x.device)
-                L_tilted = np.exp(nu) * torch.DoubleTensor(L).to(x.device)
-                K_tilted = torch.mm(L_tilted, torch.inverse(L_tilted + I)).double()
-                self.dpps[layer_num] = FiniteDPP('correlation', **{"K": K_tilted.detach().cpu().numpy()})
-                self.norm[layer_num] = torch.reciprocal(torch.diag(K_tilted))
-                self.L = L_tilted
-                self.K = K_tilted
-
-            # Keep data for debugging
-            self.layer_correlations[layer_num] = L
+                self._setup_dpp(x_matrix, layer_num, k)
             mask = torch.ones(mask_len).double().to(x.device)
-
+            self.ks[layer_num] = k
             return mask
 
-        mask = torch.zeros(mask_len).double().to(x.device)
-        ids = self.dpps[layer_num].sample_exact_k_dpp(k)
-
-        if self.ht_norm:
-            mask[ids] = self.norm[layer_num][ids]
+        if self.freezed:
+            mask = self.masks[layer_num]
         else:
-            mask[ids] = mask_len / len(ids)
+            mask = self._generate_mask(layer_num, mask_len, k)
 
         return mask
 
