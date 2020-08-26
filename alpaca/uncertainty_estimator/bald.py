@@ -1,3 +1,4 @@
+from math import ceil
 import torch
 from torch.utils.data import DataLoader
 from scipy.special import softmax
@@ -26,27 +27,49 @@ class Bald:
         return bald(mcd_runs)
 
 
-def get_predictions(model, x_pool, dropout_rate, dropout_mask, dry_run=False):
-    if isinstance(x_pool, torch.Tensor):
-        prediction = model(
-            x_pool, dropout_rate=dropout_rate, dropout_mask=dropout_mask
-        ).to('cpu')
-    elif isinstance(x_pool, DataLoader):
-        loader = x_pool
-        results = []
-        if hasattr(dropout_mask, 'freeze'):
-            dropout_mask.freeze(dry_run)
-        with torch.no_grad():
-            for batch in loader:
-                probabilities = model(batch.cuda(), dropout_rate=dropout_rate, dropout_mask=dropout_mask)
-                results.extend(list(probabilities.cpu().numpy()))
-        if hasattr(dropout_mask, 'freeze'):
-            dropout_mask.unfreeze(dry_run)
-        prediction = np.array(results)
-    else:
-        raise ValueError("Provide tensor or DataLoader")
-    return prediction
 
+class Predictor:
+    def __init__(self):
+        self.batches = []
+
+    def get_predictions(self, model, x_pool, dropout_rate, dropout_mask, dry_run=False):
+        if isinstance(x_pool, torch.Tensor):
+            prediction = model(
+                x_pool, dropout_rate=dropout_rate, dropout_mask=dropout_mask
+            ).to('cpu')
+        elif isinstance(x_pool, DataLoader):
+            loader = x_pool
+            results = []
+            if dry_run:
+                if hasattr(dropout_mask, 'freeze'):
+                    dropout_mask.freeze(dry_run)
+
+                with torch.no_grad():
+                    for batch in loader:
+                        probabilities = model(batch.cuda(), dropout_rate=dropout_rate, dropout_mask=dropout_mask)
+                        results.extend(list(probabilities.cpu().numpy()))
+                        self.batches.append(model.middle_x)
+                if hasattr(dropout_mask, 'freeze'):
+                    dropout_mask.unfreeze(dry_run)
+            else:
+                if hasattr(dropout_mask, 'freeze'):
+                    dropout_mask.freeze(dry_run)
+                with torch.no_grad():
+
+                    for batch in self.batches:
+                        batch_copy = batch.clone().cuda()
+                        probabilities = model(
+                            batch_copy, dropout_rate=dropout_rate,
+                            dropout_mask=dropout_mask, make_conv=False)
+                        results.extend(list(probabilities.cpu().numpy()))
+
+                if hasattr(dropout_mask, 'freeze'):
+                    dropout_mask.unfreeze(dry_run)
+
+            prediction = np.array(results)
+        else:
+            raise ValueError("Provide tensor or DataLoader")
+        return prediction
 
 
 class BaldMasked:
@@ -67,25 +90,21 @@ class BaldMasked:
         self.keep_runs = keep_runs
         self._mcd_runs = np.array([])
         self.acquisition = acquisition
+        self.predictor = Predictor()
 
     def estimate(self, x_pool, *args):
-        mcd_runs = np.zeros((x_pool.shape[0], self.nn_runs, self.num_classes))
+        mcd_runs = np.zeros((x_pool.shape[0], self.nn_runs, self.num_classes)).astype(np.single)
 
         with torch.no_grad():
             self.net.eval()
             # Some mask needs first run without dropout, i.e. decorrelation mask
             if hasattr(self.dropout_mask, 'dry_run') and self.dropout_mask.dry_run:
-                # self.net(x_pool, dropout_rate=self.dropout_rate, dropout_mask=self.dropout_mask)
-                get_predictions(self.net, x_pool, self.dropout_rate, self.dropout_mask, dry_run=True)
+                self.predictor.get_predictions(self.net, x_pool, self.dropout_rate, self.dropout_mask, dry_run=True)
 
             # Get mcdue estimation
             for nn_run in range(self.nn_runs):
-                print(nn_run)
-                prediction = get_predictions(self.net, x_pool, self.dropout_rate, self.dropout_mask)
-                # prediction = self.net(
-                #     x_pool, dropout_rate=self.dropout_rate, dropout_mask=self.dropout_mask
-                # ).to('cpu')
-                mcd_runs[:, nn_run] = prediction
+                prediction = self.predictor.get_predictions(self.net, x_pool, self.dropout_rate, self.dropout_mask)
+                mcd_runs[:, nn_run] = np.array(prediction).astype(np.single)
 
             if self.keep_runs:
                 self._mcd_runs = mcd_runs
@@ -144,12 +163,18 @@ def entropy(x):
 
 
 def bald(logits):
-    predictions = softmax(logits, axis=-1)
-
-    predictive_entropy = entropy(np.mean(predictions, axis=1))
-    expected_entropy = np.mean(entropy(predictions), axis=1)
-
-    return predictive_entropy - expected_entropy
+    # sofmax get OOM error with big tensors, so, let's batch it
+    batch_size = 500
+    accumulation = []
+    for i in range(ceil(len(logits)/batch_size)):
+        top = min(len(logits), (i+1)*batch_size)
+        batch = logits[i*batch_size:top]
+        predictions = softmax(batch, axis=-1)
+        predictive_entropy = entropy(np.mean(predictions, axis=1))
+        expected_entropy = np.mean(entropy(predictions), axis=1)
+        accumulation.append(predictive_entropy - expected_entropy)
+    bald_value = np.concatenate(accumulation)
+    return bald_value
 
 
 def bald_normed(logits):
@@ -157,5 +182,4 @@ def bald_normed(logits):
 
     predictive_entropy = entropy(np.mean(predictions, axis=1))
     expected_entropy = np.mean(entropy(predictions), axis=1)
-
     return (predictive_entropy - expected_entropy) / predictive_entropy

@@ -40,6 +40,9 @@ def build_mask(name, **kwargs):
 
 
 class BasicBernoulliMask:
+    def __init__(self):
+        self.dry_run = True
+
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         p = 1 - dropout_rate
 
@@ -212,7 +215,6 @@ class DPPMask:
         if dry_run:
             for layer_num, matrices in self.x_matrices.items():
                 x_matrix = np.concatenate(matrices)
-                print(x_matrix.shape)
                 self._setup_dpp(x_matrix, layer_num)
 
     def _setup_dpp(self, x_matrix, layer_num):
@@ -227,9 +229,11 @@ class DPPMask:
         self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': L})
         self.layer_correlations[layer_num] = L
 
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
         if self.ht_norm:
-            L = torch.DoubleTensor(L).cuda()
-            I = torch.eye(len(L)).double().cuda()
+            L = torch.DoubleTensor(L).to(device)
+            I = torch.eye(len(L)).double().to(device)
             K = torch.mm(L, torch.inverse(L + I))
 
             self.norm[layer_num] = torch.reciprocal(torch.diag(K))  # / len(correlations)
@@ -246,7 +250,8 @@ class DPPMask:
             if len(ids):  # We should retry if mask is zero-length
                 break
 
-        mask = torch.zeros(mask_len).double().cuda()
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        mask = torch.zeros(mask_len).double().to(device)
         if self.ht_norm:
             mask[ids] = self.norm[layer_num][ids]
         else:
@@ -316,7 +321,6 @@ class KDPPMask:
         if dry_run:
             for layer_num, matrices in self.x_matrices.items():
                 x_matrix = np.concatenate(matrices)
-                print(x_matrix.shape)
                 k = self.ks[layer_num]
                 self._setup_dpp(x_matrix, layer_num, k)
 

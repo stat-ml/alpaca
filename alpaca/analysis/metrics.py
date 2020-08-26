@@ -59,6 +59,11 @@ def uq_ndcg(errors, uq, bins=None):
 
 
 def uq_ll(errors, uq):
+    """
+    :param errors: error for the points
+    :param uq: uncertainty estimation for the points; same size as errors
+    :return: log likelihood estimation as a quality metrics for uncertainty
+    """
     errors = np.ravel(errors)
     uq_squared = np.square(np.ravel(uq)) + 1e-10
     return -np.mean(np.log(uq_squared)/2 + np.square(errors)/2/uq_squared)
