@@ -1,6 +1,6 @@
 from .nngp import NNGPRegression
-from .mcdue import MCDUE, MCDUEMasked
-from .eue import EnsembleUE, EnsembleMCDUE, EnsembleNLLUE, EnsembleMCDUEMasked
+from .mc_dropout_ue import MCDUE, MCDUEMasked
+from .ensemble_ue import EnsembleUE, EnsembleMCDUE, EnsembleNLLUE, EnsembleMCDUEMasked
 from .random_estimator import RandomEstimator
 from .bald import Bald, BaldMasked, BaldEnsemble
 
