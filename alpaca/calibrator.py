@@ -22,7 +22,7 @@ def _split_into_bins(n_bins, probs, labels):
             if i / n_bins < max_p and max_p <= (i + 1) / n_bins:
                 bins[i].append((probs[j]))
                 true_labels_for_bins[i].append(labels[j])
-    return np.array(bins, dtype=object), np.array(true_labels_for_bins, dtype=object)
+    return np.array(bins), np.array(true_labels_for_bins)
 
 
 def compute_ece(n_bins, probs, labels, len_dataset):
@@ -75,7 +75,7 @@ def _split_into_ranges(R, probs, labels):
         for i in range(j * math.floor(N / R), (j + 1) * math.floor(N / R)):
             bins[j].append(probs[i])
             true_labels[j].append(labels[i])
-    return np.array(bins, dtype=object), np.array(true_labels, dtype=object)
+    return np.array(bins), np.array(true_labels)
 
 
 def compute_ace(R, labels, probs):
@@ -169,7 +169,7 @@ class ModelWithVectScaling(nn.Module):
         optimizer = optim.LBFGS([self.W_and_b], lr=lr, max_iter=max_iter)
 
         def eval():
-            loss = nll(self.vector_scaling_logits(self.logits), self.labels)
+            loss = nll(self.scaling_logits(self.logits), self.labels)
             loss.backward()
             return loss
 
@@ -199,7 +199,7 @@ class ModelWithMatrScaling(nn.Module):
         optimizer = optim.LBFGS([self.W, self.b], lr=lr, max_iter=max_iter)
 
         def eval():
-            loss = nll(self.matrix_scaling_logits(self.logits), self.labels)
+            loss = nll(self.scaling_logits(self.logits), self.labels)
             loss.backward()
             return loss
 
