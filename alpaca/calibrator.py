@@ -78,7 +78,7 @@ def _split_into_ranges(R, probs, labels):
     return np.array(bins), np.array(true_labels)
 
 
-def compute_ace(R, labels, probs):
+def compute_ace(R, probs, labels):
     dict_class_probs = _split_into_classes(labels, probs)
     summa = 0
     for item in dict_class_probs.keys():
@@ -95,7 +95,7 @@ def compute_ace(R, labels, probs):
     return ACE
 
 
-def _choose_data(threshold, labels, probs):
+def _choose_data(threshold, probs, labels):
     arr = torch.max(torch.from_numpy(np.array(probs)), dim=1)[0]
     arr.numpy()
     arr_with_indices = list(enumerate(arr))
@@ -112,32 +112,35 @@ def _choose_data(threshold, labels, probs):
     return chosen_labels, chosen_probs
 
 
-def compute_tace(threshold, labels, probs, R):
+def compute_tace(threshold, probs, labels, R):
     if isinstance(labels, pd.DataFrame) or isinstance(labels, pd.Series):
         labels = labels.to_numpy()
-    chosen_labels, chosen_probs = _choose_data(threshold, labels, probs)
-    return compute_ace(R, chosen_labels, chosen_probs)
-
+    chosen_labels, chosen_probs = _choose_data(threshold, probs, labels)
+    return compute_ace(R, chosen_probs, chosen_labels)
 
 class ModelWithTempScaling(nn.Module):
+    """
+    A wrapper for a model with temperature scaling
 
-    def __init__(self, model, logits, labels):
+    model: a classification neural network
+    n_classes: number of classes in the dataset
+    """
+    def __init__(self, model):
         super(ModelWithTempScaling, self).__init__()
         self.model = model
         self.temperature = nn.Parameter(torch.ones(1))
-        self.logits = logits
-        self.labels = labels
 
     def forward(self, input):
         logits = self.model(input)
-        return torch.true_divide(logits, self.temperature)
+        return f.softmax(torch.true_divide(logits, self.temperature), dim=1)
 
-    def scaling(self, lr=0.01, max_iter=50):
+    def scaling(self, logits, labels, lr=0.01, max_iter=50):
+        # logits and labels must be from calibration dataset
         nll = nn.CrossEntropyLoss()
         optimizer = optim.LBFGS([self.temperature], lr=lr, max_iter=max_iter)
 
         def eval():
-            loss = nll(torch.true_divide(self.logits, self.temperature), self.labels)
+            loss = nll(torch.true_divide(logits, self.temperature), labels)
             loss.backward()
             return loss
 
@@ -146,30 +149,38 @@ class ModelWithTempScaling(nn.Module):
 
 
 class ModelWithVectScaling(nn.Module):
-    def __init__(self, model, logits, labels):
+
+    """
+    A wrapper for a model with vector scaling
+
+    model:  a classification neural network
+    n_classes: number of classes in the dataset
+
+    """
+
+    def __init__(self, model, n_classes):
         super(ModelWithVectScaling, self).__init__()
         self.model = model
-        self.logits = logits.float()
-        self.labels = labels
         self.W_and_b = nn.Parameter(
-            torch.cat((torch.ones(logits.shape[1]), torch.zeros(logits.shape[1])), dim=0))
+            torch.cat((torch.ones(n_classes), torch.zeros(n_classes)), dim=0))
 
     def forward(self, input):
         logits = self.model(input)
-        return self.scaling_logits(logits)
+        return f.softmax(self.scaling_logits(logits), dim=1)
 
     def scaling_logits(self, logits):
+        # logits and labels must be from calibration dataset
         W = torch.diag(self.W_and_b[:logits.shape[1]])
         b = self.W_and_b[logits.shape[1]:]
         b = b.unsqueeze(0).expand(logits.shape[0], -1)
-        return torch.mm(logits, W) + b
+        return torch.mm(logits.float(), W) + b
 
-    def scaling(self, lr=0.00001, max_iter=3500):
+    def scaling(self, logits, labels, lr=0.00001, max_iter=3500):
         nll = nn.CrossEntropyLoss()
         optimizer = optim.LBFGS([self.W_and_b], lr=lr, max_iter=max_iter)
 
         def eval():
-            loss = nll(self.scaling_logits(self.logits), self.labels)
+            loss = nll(self.scaling_logits(logits), labels)
             loss.backward()
             return loss
 
@@ -178,28 +189,33 @@ class ModelWithVectScaling(nn.Module):
 
 
 class ModelWithMatrScaling(nn.Module):
-    def __init__(self, model, logits, labels):
+    """
+    A wrapper for a model with matrix scaling
+
+    model: a classification neural network
+    n_classes: number of classes in the dataset
+    """
+    def __init__(self, model, n_classes):
         super(ModelWithMatrScaling, self).__init__()
         self.model = model
-        self.logits = logits.float()
-        self.labels = labels
-        self.W = nn.Parameter(torch.diag(torch.ones(logits.shape[1])))
-        self.b = nn.Parameter(torch.zeros(logits.shape[1]))
+        self.W = nn.Parameter(torch.diag(torch.ones(n_classes)))
+        self.b = nn.Parameter(torch.zeros(n_classes))
 
     def forward(self, input):
         logits = self.model(input)
-        return self.scaling_logits(logits)
+        return f.softmax(self.scaling_logits(logits), dim=1)
 
     def scaling_logits(self, logits):
         self.b.unsqueeze(0).expand(logits.shape[0], -1)
-        return torch.mm(logits, self.W) + self.b
+        return torch.mm(logits.float(), self.W) + self.b
 
-    def scaling(self, lr=0.001, max_iter=100):
+    def scaling(self, logits, labels, lr=0.001, max_iter=100):
+        # logits and labels must be from calibration dataset
         nll = nn.CrossEntropyLoss()
         optimizer = optim.LBFGS([self.W, self.b], lr=lr, max_iter=max_iter)
 
         def eval():
-            loss = nll(self.scaling_logits(self.logits), self.labels)
+            loss = nll(self.scaling_logits(logits), labels)
             loss.backward()
             return loss
 
@@ -208,6 +224,14 @@ class ModelWithMatrScaling(nn.Module):
 
 
 def binary_histogram_binning(num_bins, probs, labels, probs_to_calibrate):
+    """
+    histogram binning for  binary classification
+    :param num_bins: number of bins
+    :param probs: probabilities on calibration dataset
+    :param labels: labels of calibration dataset
+    :param probs_to_calibrate: initial probabilities on test dataset (which need to be calibrated)
+    :return: calibrated probabilities on test dataset
+    """
     bins = np.linspace(0, 1, num=num_bins)
     indexes_list = np.digitize(probs, bins) - 1
     theta = np.zeros(num_bins)
@@ -222,6 +246,14 @@ def binary_histogram_binning(num_bins, probs, labels, probs_to_calibrate):
 
 
 def multiclass_histogram_binning(num_bins, logits, labels, logits_to_calibrate):
+    """
+    histogram binning for multiclass classification
+    :param num_bins: number of bins
+    :param logits: logits on calibration dataset
+    :param labels: labels on calibration dataset
+    :param logits_to_calibrate: initial logits on test dataset (which need to be calibrated)
+    :return: calibrated probabilities on test dataset
+    """
     probs = softmax(logits, axis=1)
     probs_to_calibrate = softmax(logits_to_calibrate, axis=1)
     binning_res = []
