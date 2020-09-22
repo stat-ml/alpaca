@@ -1,0 +1,10 @@
+Masks
+=========
+
+.. currentmodule:: alpaca.ue.masks
+
+
+All masks share the same API.
+
+.. automodule:: alpaca.ue.masks
+    :members: BaseMask, MaskLayered, BasicBernoulliMask, DecorrelationMask , DecorrelationMaskScaled, DecorrelationMaskHT, LeverageScoreMask

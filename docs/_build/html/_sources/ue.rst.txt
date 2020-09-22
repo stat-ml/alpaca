@@ -1,0 +1,10 @@
+Uncertainty estimators
+======================
+
+.. currentmodule:: alpaca.ue
+
+
+All estimators share same API.
+
+.. automodule:: alpaca.ue
+    :members: MCDUE, Bald, UE

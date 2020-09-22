@@ -1,0 +1,169 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Uncertainty estimators &#8212; alpaca 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Masks" href="masks.html" />
+    <link rel="prev" title="Welcome to Alpaca’s documentation!" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="uncertainty-estimators">
+<h1>Uncertainty estimators<a class="headerlink" href="#uncertainty-estimators" title="Permalink to this headline">¶</a></h1>
+<p>All estimators share same API.</p>
+<span class="target" id="module-alpaca.ue"></span><dl class="py class">
+<dt id="alpaca.ue.Bald">
+<em class="property">class </em><code class="sig-prename descclassname">alpaca.ue.</code><code class="sig-name descname">Bald</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/alpaca/ue/bald.html#Bald"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#alpaca.ue.Bald" title="Permalink to this definition">¶</a></dt>
+<dd><p>Estimate uncertainty for samples with MCDUE approach</p>
+<dl class="py method">
+<dt id="alpaca.ue.Bald.estimate">
+<code class="sig-name descname">estimate</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">X_pool</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.7.0a0+dd0f841 ))">torch.Tensor</a></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/alpaca/ue/bald.html#Bald.estimate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#alpaca.ue.Bald.estimate" title="Permalink to this definition">¶</a></dt>
+<dd><p>TODO: docs</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="alpaca.ue.MCDUE">
+<em class="property">class </em><code class="sig-prename descclassname">alpaca.ue.</code><code class="sig-name descname">MCDUE</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/alpaca/ue/mcdue.html#MCDUE"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#alpaca.ue.MCDUE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Estimate uncertainty for samples with MCDUE approach</p>
+<dl class="py method">
+<dt id="alpaca.ue.MCDUE.estimate">
+<code class="sig-name descname">estimate</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">X_pool</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.7.0a0+dd0f841 ))">torch.Tensor</a></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/alpaca/ue/mcdue.html#MCDUE.estimate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#alpaca.ue.MCDUE.estimate" title="Permalink to this definition">¶</a></dt>
+<dd><p>TODO: docs</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="alpaca.ue.UE">
+<em class="property">class </em><code class="sig-prename descclassname">alpaca.ue.</code><code class="sig-name descname">UE</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net</span><span class="p">:</span> <span class="n">torch.nn.modules.module.Module</span></em>, <em class="sig-param"><span class="o">*</span></em>, <em class="sig-param"><span class="n">nn_runs</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)">int</a></span> <span class="o">=</span> <span class="default_value">25</span></em>, <em class="sig-param"><span class="n">dropout_rate</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a></span> <span class="o">=</span> <span class="default_value">0.5</span></em>, <em class="sig-param"><span class="n">dropout_mask</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">acquisition</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>Union<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a><span class="p">, </span>Callable<span class="p">]</span><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">keep_runs</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)">bool</a></span> <span class="o">=</span> <span class="default_value">False</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/alpaca/ue/base.html#UE"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#alpaca.ue.UE" title="Permalink to this definition">¶</a></dt>
+<dd><p>TODO: docs</p>
+<dl class="py method">
+<dt id="alpaca.ue.UE.desc">
+<em class="property">property </em><code class="sig-name descname">desc</code><a class="headerlink" href="#alpaca.ue.UE.desc" title="Permalink to this definition">¶</a></dt>
+<dd><p>description</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>TODO</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="alpaca.ue.UE.estimate">
+<em class="property">abstract </em><code class="sig-name descname">estimate</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">X_pool</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.7.0a0+dd0f841 ))">torch.Tensor</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://pytorch.org/docs/master/tensors.html#torch.Tensor" title="(in PyTorch vmaster (1.7.0a0+dd0f841 ))">torch.Tensor</a><a class="reference internal" href="_modules/alpaca/ue/base.html#UE.estimate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#alpaca.ue.UE.estimate" title="Permalink to this definition">¶</a></dt>
+<dd><p>TODO: docs</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="alpaca.ue.UE.last_mcd_runs">
+<code class="sig-name descname">last_mcd_runs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/alpaca/ue/base.html#UE.last_mcd_runs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#alpaca.ue.UE.last_mcd_runs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return model prediction for last uncertainty estimation</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="alpaca.ue.UE.reset">
+<code class="sig-name descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/alpaca/ue/base.html#UE.reset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#alpaca.ue.UE.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>TODO: docs</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">alpaca</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Uncertainty estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="masks.html">Masks</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Welcome to Alpaca’s documentation!</a></li>
+      <li>Next: <a href="masks.html" title="next chapter">Masks</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/ue.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

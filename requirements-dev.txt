@@ -1,0 +1,8 @@
+black
+pytest
+pylint
+pytest-html
+pydocstyle
+matplotlib
+requests
+dppy>=0.2.0

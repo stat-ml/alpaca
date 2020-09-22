@@ -9,6 +9,7 @@ class IdentityOracle:
     But for this oracle it's not and it's mostly placeholder
     for more advanced oracle implementations
     """
+
     def __init__(self, y_set):
         self.y_set = y_set
 
