@@ -74,14 +74,15 @@ class EnsembleMCDUE(UE):
         self.net.eval()
 
 
-class EnsembleUE(EnsembleMCDUE):
+class EnsembleUEConstrained(EnsembleMCDUE):
+    # TODO: better naming here
     """
     Estimate uncertainty for samples with Ensemble approach.
     Propose that ensemble contains nets with one output
     """
 
     def __init__(self, net):
-        super(EnsembleUE, self).__init__(net, nn_runs=1, dropout_rate=0)
+        super(EnsembleUEConstrained, self).__init__(net, nn_runs=1)
 
 
 class EnsembleNLLUE:
