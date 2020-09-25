@@ -18,7 +18,7 @@ class SimpleConv(nn.Module):
         super().__init__()
         self.conv1 = nn.Conv2d(1, 16, 3)
         self.conv2 = nn.Conv2d(16, 32, 3)
-        self.linear_size = 12*12*32
+        self.linear_size = 12 * 12 * 32
         self.fc1 = nn.Linear(self.linear_size, 256)
         self.dropout = ann.Dropout(dropout_rate)
         self.fc2 = nn.Linear(256, num_classes)
@@ -32,6 +32,7 @@ class SimpleConv(nn.Module):
         x = self.dropout(x, dropout_mask=dropout_mask, layer_num=0)
         x = self.fc2(x)
         return x
+
 
 @pytest.fixture(scope="function", autouse=True)
 def seed():

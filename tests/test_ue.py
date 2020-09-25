@@ -1,6 +1,7 @@
 import pytest
 from alpaca.ue import MCDUE
 
+
 def test_sample_mcdue(simple_conv):
     try:
         model, x_batch = simple_conv

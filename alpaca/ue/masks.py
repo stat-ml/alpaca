@@ -15,19 +15,6 @@ class BaseMask(metaclass=abc.ABCMeta):
     The base class for masks
     """
 
-    def __new__(cls, *args, **kwargs):
-        for name in cls._name_collection:
-            if name in reg_masks:
-                raise ValueError(
-                    "The given mask name: \
-                            `{}` exists".format(
-                        name
-                    )
-                )
-            reg_masks[name] = cls
-        instance = super(BaseMask, cls).__new__(cls, *args, **kwargs)
-        return instance
-
     @abc.abstractmethod
     def __call__(
         self,
@@ -56,31 +43,14 @@ class BaseMask(metaclass=abc.ABCMeta):
         """
         pass
 
-    @abc.abstractmethod
-    def dry_run(self, net: nn.Module, X_pool: torch.Tensor, dropout_rate: float):
-        """
-        Perform the first run of the masking
-
-        Parameters
-        ----------
-        net : nn.Module
-            nn.Module pytorch nn module the dropout applied in
-        X_pool : torch.Tensor
-            Input tensor
-        dropout_rate : float
-            Dropout rate of the binary mask
-
-        """
-        pass
-
 
 class MaskLayered(BaseMask):
     __doc__ = r"""
     The base class for nn layered masks
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.layer_correlations: dict = dict()
         self.norm: dict = dict()
 
@@ -105,6 +75,7 @@ class BasicBernoulliMask(BaseMask):
     """
 
     _name_collection = {"mc_dropout"}
+    dry_run = False
 
     def __init__(self):
         super().__init__()
@@ -125,14 +96,12 @@ class BasicBernoulliMask(BaseMask):
                 "Dropout probability has to be between 0 and 1, "
                 "but got {}".format(p.item)
             )
-        return (
-            torch.bernoulli(p.expand(x.size(-1)))
+        res = (
+            torch.bernoulli(p.expand(x.shape))
             .div_(p)
             .to(dtype=x.dtype, device=x.device)
         )
-
-    def dry_run(self, net: nn.Module, X_pool: torch.Tensor, dropout_rate: float):
-        pass
+        return res
 
 
 class DecorrelationMask(MaskLayered):
@@ -141,6 +110,7 @@ class DecorrelationMask(MaskLayered):
     """
 
     _name_collection = {"decorrelating"}
+    dry_run = True
 
     def __init__(
         self,
@@ -207,9 +177,6 @@ class DecorrelationMask(MaskLayered):
     def reset(self):
         self.layer_correlations.clear()
 
-    def dry_run(self, net: nn.Module, X_pool: torch.Tensor, dropout_rate: float):
-        net(X_pool, dropout_rate=dropout_rate, dropout_mask=self)
-
 
 class DecorrelationMaskScaled(MaskLayered):
     """
@@ -242,6 +209,7 @@ class LeverageScoreMask(MaskLayered):
     """
 
     _name_collection = {"leveragescoremask"}
+    dry_run = True
 
     def __init__(
         self,
@@ -300,9 +268,6 @@ class LeverageScoreMask(MaskLayered):
 
     def reset(self):
         self.layer_correlations = {}
-
-    def dry_run(self, net: nn.Module, X_pool: torch.Tensor, dropout_rate: float):
-        net(X_pool, dropout_rate=dropout_rate, dropout_mask=self)
 
 
 class LeverageScoreMaskHT(LeverageScoreMask):

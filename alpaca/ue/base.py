@@ -1,10 +1,8 @@
 import abc
-from typing import Optional, Callable, Union, Tuple
+from typing import Tuple, List, Any
 import torch
 import torch.nn as nn
 
-from alpaca.ue import masks
-from alpaca.ue import acquisitions
 
 __all__ = ["UE"]
 
@@ -37,41 +35,19 @@ class UE(metaclass=abc.ABCMeta):
 
     def __init__(
         self,
-        net: nn.Module,
+        net,
         *,
         nn_runs: int = 25,
-        dropout_mask: Optional[str] = None,
-        acquisition: Optional[Union[str, Callable]] = None,
         keep_runs: bool = False,
     ):
+        # we are keeping list for ensemble estimators
         self.net = net
         self.nn_runs = nn_runs
-        if dropout_mask:
-            if dropout_mask not in masks.reg_masks:
-                # TODO: move this to exceptions
-                raise ValueError("The given mask doesn't exist")
-            # initialize the mask
-            self.dropout_mask = reg_masks.get(dropout_mask)()
-        else:
-            self.dropout_mask = None
         self.keep_runs = keep_runs
 
-        # evaluate model for the model
-        self.net.eval()
-
-        # set acquisition strategy
-        if acquisition is None:
-            # set default acquisiiton strategy if not given
-            # defined as the attribute for each subclass
-            self._acquisition = self._default_acquisition
-        elif callable(acquisition):
-            self._acquisition = acquisition
-        else:
-            try:
-                self._acquisition = acquisitions.acq_reg[acquisition]
-            except KeyError:
-                # TODO: move this to exceptions list
-                raise ValueError("The given acquisition strategy doesn't exist")
+        if isinstance(net, nn.Module):
+            # evaluate model for the model
+            self.net.eval()
 
     @abc.abstractmethod
     def estimate(self, X_pool: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:

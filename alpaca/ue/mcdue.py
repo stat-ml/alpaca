@@ -1,9 +1,10 @@
-from typing import Tuple
+from typing import Tuple, Optional, Union, Callable
 import torch
 from tqdm import tqdm
 
 from alpaca.ue.base import UE
 from alpaca.ue import acquisitions
+
 
 __all__ = ["MCDUE"]
 
@@ -51,25 +52,36 @@ class MCDUE_regression(UE):
     _name = "MCDUE_regression"
     _default_acquisition = acquisitions.std
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self, *args, acquisition: Optional[Union[str, Callable]] = None, **kwargs
+    ):
         super().__init__(*args, **kwargs)
+
+        # set acquisition strategy
+        if acquisition is None:
+            # set default acquisiiton strategy if not given
+            # defined as the attribute for each subclass
+            self._acquisition = self._default_acquisition
+        elif callable(acquisition):
+            self._acquisition = acquisition
+        else:
+            try:
+                self._acquisition = acquisitions.acq_reg[acquisition]
+            except KeyError:
+                # TODO: move this to exceptions list
+                raise ValueError("The given acquisition strategy doesn't exist")
 
     def estimate(self, X_pool: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         mcd_runs = None
         predictions = []
         with torch.no_grad():
             # Some mask needs first run without dropout, i.e. decorrelation mask
-            """
-            # TODO:  removed dry run
-            if self.dropout_mask:
-                self.dropout_mask.dry_run(self.net, X_pool, self.dropout_rate)
+            self.net(X_pool)
 
-            """
             # Get mcdue estimation
             for nn_run in tqdm(range(self.nn_runs), total=self.nn_runs, desc=self.desc):
                 prediction = self.net(
                     X_pool,
-                    dropout_mask=self.dropout_mask,
                 )
                 mcd_runs = (
                     prediction.flatten().cpu()[None, ...]
@@ -106,25 +118,42 @@ class MCDUE_classification(UE):
     _name = "MCDUE_classification"
     _default_acquisition = acquisitions.bald
 
-    def __init__(self, *args, num_classes: int, **kwargs):
+    def __init__(
+        self,
+        *args,
+        num_classes: int,
+        acquisition: Optional[Union[str, Callable]] = None,
+        **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self.num_classes = num_classes
+
+        # set acquisition strategy
+        if acquisition is None:
+            # set default acquisiiton strategy if not given
+            # defined as the attribute for each subclass
+            self._acquisition = self._default_acquisition
+        elif callable(acquisition):
+            self._acquisition = acquisition
+        else:
+            try:
+                self._acquisition = acquisitions.acq_reg[acquisition]
+            except KeyError:
+                # TODO: move this to exceptions list
+                raise ValueError("The given acquisition strategy doesn't exist")
 
     def estimate(self, X_pool: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         mcd_runs = None
         predictions = []
         with torch.no_grad():
-            """
-            TODO: remove dry run
-            if self.dropout_mask:
-                self.dropout_mask.dry_run(self.net, X_pool, self.dropout_rate)
-            """
+            self.net(
+                X_pool,
+            )
 
             # Get mcdue estimation
             for nn_run in tqdm(range(self.nn_runs), total=self.nn_runs, desc=self.desc):
                 prediction = self.net(
                     X_pool,
-                    dropout_mask=self.dropout_mask,
                 )
                 mcd_runs = (
                     prediction.cpu()[None, ...]
@@ -139,4 +168,4 @@ class MCDUE_classification(UE):
         if self.keep_runs is True:
             self._mcd_runs = mcd_runs
 
-        return predictions, self._acquisition(mcd_runs)
+        return predictions, self._acquisition(self, mcd_runs)
