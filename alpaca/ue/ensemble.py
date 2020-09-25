@@ -6,6 +6,8 @@ from alpaca.ue.base import UE
 from alpaca.models import Ensemble
 from alpaca.ue import acquisitions
 
+__all__ = ["EnsembleMCDUE"]
+
 
 class EnsembleMCDUE(UE):
     """
@@ -16,10 +18,29 @@ class EnsembleMCDUE(UE):
     _default_acquisition = acquisitions.std
 
     def __init__(
-        self, *args, acquisition: Optional[Union[str, Callable]] = None, **kwargs
+        self,
+        *args,
+        acquisition: Optional[Union[str, Callable]] = None,
+        reduction=None,
+        **kwargs
     ):
         super().__init__(*args, **kwargs)
         self._create_model_from_list()
+        self.reduction = reduction
+
+        # set acquisition strategy
+        if acquisition is None:
+            # set default acquisiiton strategy if not given
+            # defined as the attribute for each subclass
+            self._acquisition = self._default_acquisition
+        elif callable(acquisition):
+            self._acquisition = acquisition
+        else:
+            try:
+                self._acquisition = acquisitions.acq_reg[acquisition]
+            except KeyError:
+                # TODO: move this to exceptions list
+                raise ValueError("The given acquisition strategy doesn't exist")
 
     def estimate(self, X_pool: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         mcd_runs = None
@@ -27,15 +48,11 @@ class EnsembleMCDUE(UE):
 
         with torch.no_grad():
             # Some mask needs first run without dropout, i.e. decorrelation mask
-            self.net(
-                X_pool,
-            )
+            self.net(X_pool, reduction=self.reduction)
 
             # Get mcdue estimation
             for nn_run in tqdm(range(self.nn_runs), total=self.nn_runs, desc=self.desc):
-                prediction = self.net(
-                    X_pool,
-                )
+                prediction = self.net(X_pool, reduction=self.reduction)
                 mcd_runs = (
                     prediction.flatten().cpu()[None, ...]
                     if mcd_runs is None
@@ -50,7 +67,7 @@ class EnsembleMCDUE(UE):
         # save `mcf_runs` stats
         if self.keep_runs is True:
             self._mcd_runs = mcd_runs
-        return predictions, self._acquisition(mcd_runs)
+        return predictions, self._acquisition(self, mcd_runs)
 
     def _create_model_from_list(self):
         self.net = Ensemble(self.net)

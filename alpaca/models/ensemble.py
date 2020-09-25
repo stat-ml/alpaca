@@ -4,12 +4,13 @@ import torch
 class Ensemble:
     def __init__(self, modules):
         self.modules = modules
+        self.reduction = None
 
     def eval(self):
         [m.eval() for m in self.modules]
 
     def __call__(self, x, reduction="default"):
-        res = torch.stack([m(x) for m in self.models])
+        res = torch.stack([m(x) for m in self.modules])
         if reduction == "default":
             reduction = self.reduction
         if reduction is None:
