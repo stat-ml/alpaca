@@ -75,7 +75,6 @@ class MCDUE_regression(UE):
         mcd_runs = None
         predictions = []
         with torch.no_grad():
-            # Some mask needs first run without dropout, i.e. decorrelation mask
             self.net(X_pool)
 
             # Get mcdue estimation

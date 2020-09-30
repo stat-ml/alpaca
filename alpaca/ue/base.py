@@ -1,5 +1,5 @@
 import abc
-from typing import Tuple, List, Any
+from typing import Tuple
 import torch
 import torch.nn as nn
 
@@ -17,8 +17,6 @@ class UE(metaclass=abc.ABCMeta):
         Neural network on based on which we are calculating uncertainty region
     nn_runs: int
         A number of iterations
-    dropout_mask: Optional[str]
-        The string defining the key for dropout mask logic
     acquisitions: Optional[Union[str, Callable]]
         Acquisiiton function definition
     keep_runs: bool

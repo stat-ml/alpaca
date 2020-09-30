@@ -1,9 +1,6 @@
 import abc
-from typing import Optional, Union
-
+from typing import Union
 import torch
-import torch.nn as nn
-import numpy as np
 
 from alpaca.utils.functions import corrcoef, mc_probability, cov
 
@@ -15,13 +12,15 @@ class BaseMask(metaclass=abc.ABCMeta):
     The base class for masks
     """
 
+    def __init__(self):
+        self._init_run = True
+
     @abc.abstractmethod
     def __call__(
         self,
         x: torch.Tensor,
         *,
         dropout_rate: Union[torch.Tensor, float] = 0.5,
-        layer_num: Optional[int] = None,
     ) -> torch.Tensor:
         """
         Performs masked inference logic
@@ -32,8 +31,6 @@ class BaseMask(metaclass=abc.ABCMeta):
             Tensor to be masked
         dropout_rate : float
             Dropout rate of the binary mask
-        layer_num : int
-            The index number of the layer to perform dropout
 
         Returns
         -------
@@ -70,7 +67,7 @@ class BasicBernoulliMask(BaseMask):
 
     Examples
     --------
-    >>> estimator = MCDUE(model, nn_runs=100, acquisition='std', dropout_mask="mc_dropout")
+    >>> estimator = MCDUE(model, nn_runs=100, acquisition='std')
     >>> estimations1 = estimator.estimate(x_batch)
     """
 
@@ -85,9 +82,6 @@ class BasicBernoulliMask(BaseMask):
         x: torch.Tensor,
         *,
         dropout_rate: Union[torch.Tensor, float] = 0.5,
-        layer_num: Optional[
-            int
-        ] = None,  # TODO: remove this, we need to think of better OOP arch here
     ) -> torch.Tensor:
         dropout_rate = torch.as_tensor(dropout_rate)
         p = 1.0 - dropout_rate
@@ -129,29 +123,25 @@ class DecorrelationMask(MaskLayered):
         x: torch.Tensor,
         *,
         dropout_rate: Union[torch.Tensor, float] = 0.5,
-        layer_num: Optional[int] = None,
     ) -> torch.Tensor:
         mask_len = x.size(-1)
         k = int(mask_len * (1.0 - dropout_rate))
 
-        if layer_num not in self.layer_correlations:
-            return self._init_layers(x, layer_num, k, mask_len)
+        if self._init_run:
+            self._init_run = True
+            return self._init_layers(x, k, mask_len)
 
         mask = torch.zeros(mask_len, dtype=x.dtype, device=x.device)
-        inds = torch.multinomial(
-            self.layer_correlations[layer_num], k, replacement=False
-        )
+        inds = torch.multinomial(self.layer_correlation, k, replacement=False)
 
         if self.ht_norm is True:
-            mask[inds] = self.norm[layer_num][inds]
+            mask[inds] = self.norm[inds]
         else:
             mask[inds] = torch.Tensor([1 / (1 - dropout_rate)]).to(dtype=x.dtype)
 
         return mask
 
-    def _init_layers(
-        self, x: torch.Tensor, layer_num: int, k: int, mask_len: int
-    ) -> torch.Tensor:
+    def _init_layers(self, x: torch.Tensor, mask_len: int) -> torch.Tensor:
         noise = torch.rand(*x.shape, dtype=x.dtype, device=x.device) * self.eps
         corrs = torch.sum(torch.abs(corrcoef((x + noise).transpose())), axis=1)
         scores = torch.reciprocal(corrs)
@@ -160,15 +150,13 @@ class DecorrelationMask(MaskLayered):
             scores = (
                 4.0 * scores / torch.max(scores)
             )  # TODO: remove hard coding or annotate
-        self.layer_correlations[layer_num] = torch.softmax(scores)
+        self.layer_correlation = torch.softmax(scores)
 
         if self.ht_norm:
             # Horvitz-Thopson normalization (1 / marginal_prob for each element)
-            probabilities = self.layer_correlations[layer_num]
+            probabilities = self.layer_correlation
             samples = max(1000, 4 * x.size(-1))  # TODO: why? (explain 1000)
-            self.norm[layer_num] = torch.reciprocal(
-                mc_probability(probabilities, k, samples)
-            )
+            self.norm = torch.reciprocal(mc_probability(probabilities, k, samples))
 
         # Initially we should pass identity mask,
         # otherwise we won't get right correlations for all layers
@@ -222,28 +210,25 @@ class LeverageScoreMask(MaskLayered):
         self.lambda_ = lambda_
         self.covariance = covariance
 
-    def __call__(self, x, dropout_rate=0.5, layer_num=0):
+    def __call__(self, x, dropout_rate=0.5):
         mask_len = x.shape[-1]
         k = int(mask_len * (1 - dropout_rate))
 
-        if layer_num not in self.layer_correlations:
-            return self._init_layers(
-                x,
-            )
+        if self._init_run:
+            self._init_run = True
+            return self._init_layers(x)
 
         mask = torch.zeros(mask_len).double().to(x.device)
-        ids = np.random.choice(
-            len(mask), k, p=self.layer_correlations[layer_num], replace=False
-        )
+        ids = torch.multinomial(self.layer_correlation, k, replacement=False)
 
         if self.ht_norm:
-            mask[ids] = torch.DoubleTensor(self.norm[layer_num][ids]).to(x.device)
+            mask[ids] = torch.DoubleTensor(self.norm[ids]).to(x.device)
         else:
             mask[ids] = 1 / (1 - dropout_rate)
 
         return mask
 
-    def _init_layers(self, x: torch.Tensor, layer_num: int, mask_len: int, k: int):
+    def _init_layers(self, x: torch.Tensor, mask_len: int, k: int):
         if self.covariance:
             K = cov(x.transpose())
         else:
@@ -252,15 +237,13 @@ class LeverageScoreMask(MaskLayered):
         leverages_matrix = torch.dot(K, torch.inverse(K + self.lambda_ * identity))
         probabilities = torch.diagonal(leverages_matrix)
         probabilities = probabilities / torch.sum(probabilities)
-        self.layer_correlations[layer_num] = probabilities
+        self.layer_correlations = probabilities
 
         if self.ht_norm:
             # Horvitz-Thopson normalization (1 / marginal_prob for each element)
-            probabilities = self.layer_correlations[layer_num]
+            probabilities = self.layer_correlations
             samples = max(1000, 4 * x.size(-1))  # TODO: why? (explain 1000)
-            self.norm[layer_num] = torch.reciprocal(
-                mc_probability(probabilities, k, samples)
-            )
+            self.norm = torch.reciprocal(mc_probability(probabilities, k, samples))
 
         # Initially we should pass identity mask,
         # otherwise we won't get right correlations for all layers
