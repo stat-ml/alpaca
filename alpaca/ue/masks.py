@@ -40,6 +40,14 @@ class BaseMask(metaclass=abc.ABCMeta):
         """
         pass
 
+    def copy(self) -> "BaseMask":
+        """
+        Creates the copy of an instance
+        """
+        instance = self.__class__()
+        instance.__dict__ = self.__dict__.copy()
+        return instance
+
 
 class MaskLayered(BaseMask):
     __doc__ = r"""
@@ -72,7 +80,6 @@ class BasicBernoulliMask(BaseMask):
     """
 
     _name_collection = {"mc_dropout"}
-    dry_run = False
 
     def __init__(self):
         super().__init__()
@@ -80,7 +87,6 @@ class BasicBernoulliMask(BaseMask):
     def __call__(
         self,
         x: torch.Tensor,
-        *,
         dropout_rate: Union[torch.Tensor, float] = 0.5,
     ) -> torch.Tensor:
         dropout_rate = torch.as_tensor(dropout_rate)
@@ -104,7 +110,6 @@ class DecorrelationMask(MaskLayered):
     """
 
     _name_collection = {"decorrelating"}
-    dry_run = True
 
     def __init__(
         self,
@@ -121,7 +126,6 @@ class DecorrelationMask(MaskLayered):
     def __call__(
         self,
         x: torch.Tensor,
-        *,
         dropout_rate: Union[torch.Tensor, float] = 0.5,
     ) -> torch.Tensor:
         mask_len = x.size(-1)
@@ -129,7 +133,7 @@ class DecorrelationMask(MaskLayered):
 
         if self._init_run:
             self._init_run = True
-            return self._init_layers(x, k, mask_len)
+            return self._init_layers(x, mask_len, k)
 
         mask = torch.zeros(mask_len, dtype=x.dtype, device=x.device)
         inds = torch.multinomial(self.layer_correlation, k, replacement=False)
@@ -141,16 +145,16 @@ class DecorrelationMask(MaskLayered):
 
         return mask
 
-    def _init_layers(self, x: torch.Tensor, mask_len: int) -> torch.Tensor:
+    def _init_layers(self, x: torch.Tensor, mask_len: int, k: int) -> torch.Tensor:
         noise = torch.rand(*x.shape, dtype=x.dtype, device=x.device) * self.eps
-        corrs = torch.sum(torch.abs(corrcoef((x + noise).transpose())), axis=1)
+        corrs = torch.sum(torch.abs(corrcoef((x + noise).transpose(1, 0))), dim=1)
         scores = torch.reciprocal(corrs)
 
         if self.scaling:
             scores = (
                 4.0 * scores / torch.max(scores)
             )  # TODO: remove hard coding or annotate
-        self.layer_correlation = torch.softmax(scores)
+        self.layer_correlation = torch.nn.functional.softmax(scores)
 
         if self.ht_norm:
             # Horvitz-Thopson normalization (1 / marginal_prob for each element)
@@ -197,7 +201,6 @@ class LeverageScoreMask(MaskLayered):
     """
 
     _name_collection = {"leveragescoremask"}
-    dry_run = True
 
     def __init__(
         self,
@@ -216,7 +219,7 @@ class LeverageScoreMask(MaskLayered):
 
         if self._init_run:
             self._init_run = True
-            return self._init_layers(x)
+            return self._init_layers(x, mask_len, k)
 
         mask = torch.zeros(mask_len).double().to(x.device)
         ids = torch.multinomial(self.layer_correlation, k, replacement=False)
@@ -230,9 +233,9 @@ class LeverageScoreMask(MaskLayered):
 
     def _init_layers(self, x: torch.Tensor, mask_len: int, k: int):
         if self.covariance:
-            K = cov(x.transpose())
+            K = cov(x.transpose(1, 0))
         else:
-            K = corrcoef(x.transpose())
+            K = corrcoef(x.transpose(1, 0))
         identity = torch.eye(K.size(0))
         leverages_matrix = torch.dot(K, torch.inverse(K + self.lambda_ * identity))
         probabilities = torch.diagonal(leverages_matrix)
@@ -270,160 +273,3 @@ class LeverageScoreMaskCov(LeverageScoreMask):
         self.ht_norm = True
         self.lambda_ = 1
         self.covariance = True
-
-
-"""
-class DPPMask:
-    def __init__(self, ht_norm=False, covariance=False):
-        self.dpps = {}
-        self.layer_correlations = (
-            {}
-        )  # keep for debug purposes # Flag for uncertainty estimator to make first run without taking the result
-        self.dry_run = True
-        self.ht_norm = ht_norm
-        self.norm = {}
-        self.covariance = covariance
-
-    def __call__(self, x, dropout_rate=0.5, layer_num=0):
-        if layer_num not in self.layer_correlations:
-            # warm-up, generatign correlations masks
-            x_matrix = x.cpu().numpy()
-
-            self.x_matrix = x_matrix
-            micro = 1e-12
-            x_matrix += (
-                np.random.random(x_matrix.shape) * micro
-            )  # for computational stability
-            if self.covariance:
-                L = np.cov(x_matrix.T)
-            else:
-                L = np.corrcoef(x_matrix.T)
-
-            self.dpps[layer_num] = FiniteDPP("likelihood", **{"L": L})
-            self.layer_correlations[layer_num] = L
-
-            if self.ht_norm:
-                L = torch.DoubleTensor(L).cuda()
-                I = torch.eye(len(L)).double().cuda()
-                K = torch.mm(L, torch.inverse(L + I))
-
-                self.norm[layer_num] = torch.reciprocal(
-                    torch.diag(K)
-                )  # / len(correlations)
-                self.L = L
-                self.K = K
-
-            return x.data.new(x.data.size()[-1]).fill_(1)
-
-        # sampling nodes ids
-        dpp = self.dpps[layer_num]
-
-        for _ in range(ATTEMPTS):
-            dpp.sample_exact()
-            ids = dpp.list_of_samples[-1]
-            if len(ids):  # We should retry if mask is zero-length
-                break
-
-        mask_len = x.shape[-1]
-        mask = torch.zeros(mask_len).double().cuda()
-        if self.ht_norm:
-            mask[ids] = self.norm[layer_num][ids]
-        else:
-            mask[ids] = mask_len / len(ids)
-
-        return x.data.new(mask)
-
-    def reset(self):
-        self.layer_correlations = {}
-
-
-def get_nu(eigen_values, k):
-    values = eigen_values + 1e-14
-
-    def point(nu):
-        exp_nu = np.exp(nu)
-        expect = np.sum([val * exp_nu / (1 + exp_nu * val) for val in values])
-        return expect - k
-
-    try:
-        solution = root_scalar(point, bracket=[-10.0, 10.0])
-        assert solution.converged
-        return solution.root
-    except (ValueError, AssertionError):
-        raise ValueError("k-dpp: Probably too small matrix rank for the k")
-
-
-class KDPPMask:
-    def __init__(
-        self, noise_level=None, tol_level=1e-3, ht_norm=False, covariance=False
-    ):
-        self.layer_correlations = {}
-        self.dry_run = True
-        self.dpps = {}
-        self.ranks = {}
-        self.ranks_history = defaultdict(list)
-        self.noise_level = noise_level
-        self.tol_level = tol_level
-
-        self.ht_norm = ht_norm
-        self.norm = {}
-
-        self.covariance = covariance
-
-    def _rank(self, dpp=None, eigen_values=None):
-        if eigen_values is None:
-            eigen_values = dpp.L_eig_vals
-        rank = np.count_nonzero(eigen_values > self.tol_level)
-        return rank
-
-    def __call__(self, x, dropout_rate=0.5, layer_num=0):
-        mask_len = x.shape[-1]
-        k = int(mask_len * (1 - dropout_rate))
-
-        if layer_num not in self.layer_correlations:
-            x_matrix = x.cpu().numpy()
-
-            if self.covariance:
-                L = np.cov(x_matrix.T)
-            else:
-                L = np.corrcoef(x_matrix.T)
-
-            if self.noise_level is not None:
-                L += self.noise_level * np.eye(len(L))
-
-            if not self.ht_norm:
-                self.dpps[layer_num] = FiniteDPP("likelihood", **{"L": L})
-                self.dpps[layer_num].sample_exact()  # to trigger eig values generation
-            else:
-                eigen_values = np.linalg.eigh(L)[0]
-                "Get tilted k-dpp, see amblard2018"
-                nu = get_nu(eigen_values, k)
-                I = torch.eye(len(L)).to(x.device)
-                L_tilted = np.exp(nu) * torch.DoubleTensor(L).to(x.device)
-                K_tilted = torch.mm(L_tilted, torch.inverse(L_tilted + I)).double()
-                self.dpps[layer_num] = FiniteDPP(
-                    "correlation", **{"K": K_tilted.detach().cpu().numpy()}
-                )
-                self.norm[layer_num] = torch.reciprocal(torch.diag(K_tilted))
-                self.L = L_tilted
-                self.K = K_tilted
-
-            # Keep data for debugging
-            self.layer_correlations[layer_num] = L
-            mask = torch.ones(mask_len).double().to(x.device)
-
-            return mask
-
-        mask = torch.zeros(mask_len).double().to(x.device)
-        ids = self.dpps[layer_num].sample_exact_k_dpp(k)
-
-        if self.ht_norm:
-            mask[ids] = self.norm[layer_num][ids]
-        else:
-            mask[ids] = mask_len / len(ids)
-
-        return mask
-
-    def reset(self):
-        self.layer_correlations = {}
-"""

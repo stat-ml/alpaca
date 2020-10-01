@@ -72,21 +72,3 @@ class EnsembleMCDUE(UE):
     def _create_model_from_list(self):
         self.net = Ensemble(self.net)
         self.net.eval()
-
-
-class EnsembleNLLUE:
-    """
-    Estimate uncertainty for samples with Ensemble approach.
-    Ensemble must contains nets with two outputs: mean and sigma_squared
-    """
-
-    def __init__(self, net):
-        self.net = net
-
-    def estimate(self, X_pool, **kwargs):
-        with torch.no_grad():
-            res = self.net(X_pool, reduction="nll")
-            sigma = res[:, 1].to("cpu")
-            sigma = torch.sqrt(sigma)
-
-        return torch.flatten(sigma)

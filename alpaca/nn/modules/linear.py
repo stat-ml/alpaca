@@ -1,32 +1,33 @@
+from typing import Optional
 import torch
 import torch.nn as nn
-import alpaca.nn as ann
+
+from alpaca.ue.masks import BaseMask
+from alpaca.nn.modules.module import Module
 
 __all__ = ["Linear"]
 
 
-class Linear(nn.Linear):
+class Linear(nn.Linear, Module):
     """
-    Linear layer with the masked noise
+    The subclass of nn.Linear layer with the additional `dropout_mask` and `dropout_rate` parameterization
     """
 
-    def __init__(self, *args, dropout_rate=0.0, dropout_mask=None, **kwargs):
-        if type(args[0]) is ann.Linear or type(args[0]) is nn.Linear:
-            self.__dict__ = args[0].__dict__.copy()
-        else:
-            super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        *args,
+        dropout_rate: float = 0.0,
+        dropout_mask: Optional[BaseMask] = None,
+        **kwargs
+    ):
+        super().__init__(*args, **kwargs)
         self.dropout_rate = dropout_rate
         self.dropout_mask = dropout_mask
 
-    def forward(self, input):
+    def forward(self, input: torch.Tensor):
         out = super().forward(input)
-        if self.dropout_mask:
-            out = out * self.dropout_mask(out, self.dropout_rate)
-        else:
+        if self.dropout_mask is None or self.training is True:
             out = torch.nn.functional.dropout(out, p=self.dropout_rate)
+        else:
+            out = out * self.dropout_mask(out, self.dropout_rate)
         return out
-
-    @classmethod
-    def instantiate(cls, module, dropout_rate=0.0, dropout_mask=None):
-        instance = cls(module, dropout_rate=dropout_rate, dropout_mask=dropout_mask)
-        return instance

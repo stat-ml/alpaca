@@ -77,11 +77,10 @@ class MCDUE_regression(UE):
         with torch.no_grad():
             self.net(X_pool)
 
-            # Get mcdue estimation
+            # Get mcdue k
+            stimation
             for nn_run in tqdm(range(self.nn_runs), total=self.nn_runs, desc=self.desc):
-                prediction = self.net(
-                    X_pool,
-                )
+                prediction = self.net(X_pool)
                 mcd_runs = (
                     prediction.flatten().cpu()[None, ...]
                     if mcd_runs is None
@@ -145,15 +144,11 @@ class MCDUE_classification(UE):
         mcd_runs = None
         predictions = []
         with torch.no_grad():
-            self.net(
-                X_pool,
-            )
+            self.net(X_pool)
 
             # Get mcdue estimation
             for nn_run in tqdm(range(self.nn_runs), total=self.nn_runs, desc=self.desc):
-                prediction = self.net(
-                    X_pool,
-                )
+                prediction = self.net(X_pool)
                 mcd_runs = (
                     prediction.cpu()[None, ...]
                     if mcd_runs is None
@@ -161,6 +156,9 @@ class MCDUE_classification(UE):
                 )
                 predictions.append(prediction.cpu())
 
+        import pdb
+
+        pdb.set_trace()
         predictions = torch.cat([*predictions], dim=0)
         mcd_runs = mcd_runs.permute((1, 0, 2))
 
