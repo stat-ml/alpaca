@@ -156,9 +156,6 @@ class MCDUE_classification(UE):
                 )
                 predictions.append(prediction.cpu())
 
-        import pdb
-
-        pdb.set_trace()
         predictions = torch.cat([*predictions], dim=0)
         mcd_runs = mcd_runs.permute((1, 0, 2))
 
