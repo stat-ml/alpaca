@@ -22,7 +22,9 @@ class Module:
 
     def __str__(self):
         return "ann.{}, dropout_rate: {}, dropout_mask: {}".format(
-            self.__class__.__name__, self.dropout_rate, self.dropout_mask.__class__.__name__
+            self.__class__.__name__,
+            self.dropout_rate,
+            self.dropout_mask.__class__.__name__,
         )
 
     # FIXME
