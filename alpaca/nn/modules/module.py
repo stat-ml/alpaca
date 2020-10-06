@@ -20,13 +20,10 @@ class Module:
         self.dropout_mask = dropout_mask
         return self
 
-    @property
-    def _extra_repr():
-        return ""
+    def __str__(self):
+        return "ann.{}, dropout_rate: {}, dropout_mask: {}".format(
+            self.__class__.__name__, self.dropout_rate, self.dropout_mask.__class__.__name__
+        )
 
-    def __repr__(self):
-        extra = self._extra_repr
-        if extra:
-            return "{} layer; {}".format(self.__class__.__name__, extra)
-        else:
-            return "{} layer".format(self.__class__.__name__)
+    # FIXME
+    __repr__ = __str__

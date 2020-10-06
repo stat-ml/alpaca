@@ -42,10 +42,8 @@ class EnsembleMCDUE(UE):
                 # TODO: move this to exceptions list
                 raise ValueError("The given acquisition strategy doesn't exist")
 
-    def estimate(self, X_pool: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def __call__(self, X_pool: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         mcd_runs = None
-        predictions = []
-
         with torch.no_grad():
             # Some mask needs first run without dropout, i.e. decorrelation mask
             self.net(X_pool, reduction=self.reduction)
@@ -60,9 +58,8 @@ class EnsembleMCDUE(UE):
                         [mcd_runs, prediction.flatten().cpu()[None, ...]], dim=0
                     )
                 )
-                predictions.append(prediction.cpu())
 
-        predictions = torch.cat([*predictions], dim=0)
+        predictions = mcd_runs.mean(dim=0)
 
         # save `mcf_runs` stats
         if self.keep_runs is True:

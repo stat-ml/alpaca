@@ -48,7 +48,7 @@ class UE(metaclass=abc.ABCMeta):
             self.net.eval()
 
     @abc.abstractmethod
-    def estimate(self, X_pool: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def __call__(self, X_pool: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Estimate uncertainty
 

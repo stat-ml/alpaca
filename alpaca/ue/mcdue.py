@@ -71,14 +71,12 @@ class MCDUE_regression(UE):
                 # TODO: move this to exceptions list
                 raise ValueError("The given acquisition strategy doesn't exist")
 
-    def estimate(self, X_pool: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def __call__(self, X_pool: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         mcd_runs = None
-        predictions = []
         with torch.no_grad():
             self.net(X_pool)
 
-            # Get mcdue k
-            stimation
+            # Get mcdue k estimation
             for nn_run in tqdm(range(self.nn_runs), total=self.nn_runs, desc=self.desc):
                 prediction = self.net(X_pool)
                 mcd_runs = (
@@ -88,10 +86,8 @@ class MCDUE_regression(UE):
                         [mcd_runs, prediction.flatten().cpu()[None, ...]], dim=0
                     )
                 )
-                predictions.append(prediction.cpu())
 
-        predictions = torch.cat([*predictions], dim=0)
-
+        predictions = mcd_runs.mean(dim=0)
         # save `mcf_runs` stats
         if self.keep_runs is True:
             self._mcd_runs = mcd_runs
@@ -140,9 +136,8 @@ class MCDUE_classification(UE):
                 # TODO: move this to exceptions list
                 raise ValueError("The given acquisition strategy doesn't exist")
 
-    def estimate(self, X_pool: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def __call__(self, X_pool: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         mcd_runs = None
-        predictions = []
         with torch.no_grad():
             self.net(X_pool)
 
@@ -154,10 +149,9 @@ class MCDUE_classification(UE):
                     if mcd_runs is None
                     else torch.cat([mcd_runs, prediction.cpu()[None, ...]], dim=0)
                 )
-                predictions.append(prediction.cpu())
 
-        predictions = torch.cat([*predictions], dim=0)
         mcd_runs = mcd_runs.permute((1, 0, 2))
+        predictions = mcd_runs.mean(dim=1)
 
         if self.keep_runs is True:
             self._mcd_runs = mcd_runs

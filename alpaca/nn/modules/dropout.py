@@ -8,7 +8,7 @@ from alpaca.nn.modules.module import Module
 __all__ = ["Dropout"]
 
 
-class Dropout(nn.Dropout, Module):
+class Dropout(Module, nn.Dropout):
     """
     The subclass of nn.Dropout layer with the additional `dropout_mask` and `dropout_rate` parameterization
     """

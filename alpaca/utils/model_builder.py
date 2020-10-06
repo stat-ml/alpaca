@@ -36,4 +36,13 @@ def build_model(
                 dropout_rate=dropout_rate,
                 dropout_mask=dropout_mask.copy() if dropout_mask else None,
             )
+        elif type(item) == nn.Sequential or type(item) == nn.ModuleList:
+            for i, module in enumerate(item):
+                module = build_model(
+                    module,
+                    dropout_rate=dropout_rate,
+                    dropout_mask=dropout_mask,
+                    keys=keys,
+                )
+                model._modules[key][i] = module
     return model
