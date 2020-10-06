@@ -1,0 +1,42 @@
+# ref : Anaconda Inc., Using conda with Travis CI, Conda documentation, https://conda.io/docs/user-guide/tasks/use-conda-with-travis-ci.html
+#       CodeChat, .travis.yml - Travis CI configuration, https://pythonhosted.org/CodeChat/.travis.yml.html
+#       Travis CI, Python example (unsupported languages), https://docs.travis-ci.com/user/multi-os/#python-example-unsupported-languages
+#       Kalderimis & Nagy, Windows is Available (Early Release), Oct 10 2018, https://blog.travis-ci.com/2018-10-11-windows-early-release
+#       Miniconda (Python 3) 4.5.11, Chocolatey Gallery, https://chocolatey.org/packages/miniconda3
+#       The Windows Build Environment, https://docs.travis-ci.com/user/reference/windows/
+#       Minimal .travis.yml file to run the current Python 3.7 on Linux, macOS, and Windows, https://github.com/cclauss/Travis-CI-Python-on-three-OSes
+
+language : shell
+
+env:
+  - PYTHON_VERSION=3.6 PYTORCH_CHANNEL='pytorch' PYTORCH_VERSION='=1.6.0'
+  - PYTHON_VERSION=3.6 PYTORCH_CHANNEL='pytorch' PYTORCH_VERSION='=1.5.1'
+  - PYTHON_VERSION=3.6 PYTORCH_CHANNEL='pytorch' PYTORCH_VERSION='=1.4.0'
+  - PYTHON_VERSION=3.6 PYTORCH_CHANNEL='pytorch' PYTORCH_VERSION='=1.3.1'
+  - PYTHON_VERSION=3.6 PYTORCH_CHANNEL='pytorch-nightly' PYTORCH_VERSION=''
+
+matrix:
+  allow_failures:
+    - env: PYTHON_VERSION=3.6 PYTORCH_CHANNEL='pytorch-nightly' PYTORCH_VERSION=''
+
+os:
+  - linux
+  - windows
+  - osx
+
+before_install:
+  - source ./scripts/before_install_nix_win.sh
+
+install:
+  - source ./scripts/install_nix_win.sh
+  - source ./scripts/install_deps.sh
+  - python setup.py develop --no-deps
+
+script:
+  - conda --version && python --version && pip --version && python -c 'import torch; print("torch", torch.__version__)'
+  - black --check --diff geoopt tests
+  - pytest -v alpaca tests --durations=0
+
+after_success:
+  - echo $(pwd)
+  - ls -la
