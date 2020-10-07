@@ -77,7 +77,6 @@ class MCDUE_regression(UE):
         with torch.no_grad():
             self.net(X_pool)
 
-            # Get mcdue k estimation
             for nn_run in tqdm(range(self.nn_runs), total=self.nn_runs, desc=self.desc):
                 prediction = self.net(X_pool)
                 mcd_runs = (
