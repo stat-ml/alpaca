@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?><testsuite errors="1" failures="0" name="pytest" skipped="0" tests="1" time="0.197"><testcase classname="" file="tests/test_modules.py" name="tests.test_modules" time="0.000"><error message="collection failure">ImportError while importing test module &apos;/home/rasul/Desktop/forks/alpaca/alpaca_fork/tests/test_modules.py&apos;.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-test_modules.py:2: in &lt;module&gt;
-    from alpaca.nn import Dropout
-E   ModuleNotFoundError: No module named &apos;alpaca.nn&apos;</error></testcase></testsuite>
