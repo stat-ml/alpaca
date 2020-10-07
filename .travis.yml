@@ -34,7 +34,7 @@ install:
 
 script:
   - conda --version && python --version && pip --version && python -c 'import torch; print("torch", torch.__version__)'
-  - black --check --diff geoopt tests
+  - black --check --diff alpaca tests
   - pytest -v alpaca tests --durations=0
 
 after_success:
