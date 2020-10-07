@@ -20,7 +20,7 @@ def reg_acquisition(f):
 
 
 @reg_acquisition
-def std(instance, mcd_runs: torch.Tensor):
+def std(mcd_runs: torch.Tensor):
     """
     var_ratio_acquisition
     TODO: docs
@@ -28,22 +28,21 @@ def std(instance, mcd_runs: torch.Tensor):
     return mcd_runs.std(dim=0)
 
 
+"""
+TODO: add logic to handle instance attributes
 @reg_acquisition
-def var_ratio(instance, mcd_runs: torch.Tensor):
-    """
-    var_ratio_acquisition
-    TODO: docs
-    """
+def var_ratio(mcd_runs: torch.Tensor):
     predictions = torch.argmax(mcd_runs, axis=-1)
     # count how many time repeats the strongest class
     mode_count = lambda preds: torch.max(torch.bincount(preds))
     modes = [mode_count(point) for point in predictions]
     ue = 1 - torch.stack(modes) / instance.nn_runs
     return ue
+"""
 
 
 @reg_acquisition
-def var_soft(instance, mcd_runs: torch.Tensor):
+def var_soft(mcd_runs: torch.Tensor):
     """
     var_soft_acquisition
     TODO: docs
@@ -54,7 +53,7 @@ def var_soft(instance, mcd_runs: torch.Tensor):
 
 
 @reg_acquisition
-def bald(instance, mcd_runs: torch.Tensor):
+def bald(mcd_runs: torch.Tensor):
     """
     bald_acquisition
     TODO: docs
@@ -63,7 +62,7 @@ def bald(instance, mcd_runs: torch.Tensor):
 
 
 @reg_acquisition
-def bald_normed(instance, mcd_runs: torch.Tensor):
+def bald_normed(mcd_runs: torch.Tensor):
     """
     bald_normed_acquisition
     TODO: docs

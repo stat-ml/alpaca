@@ -55,6 +55,9 @@ class BaseMask(metaclass=abc.ABCMeta):
         instance.__dict__ = self.__dict__.copy()
         return instance
 
+    def reset(self):
+        pass
+
 
 class MaskLayered(BaseMask):
     __doc__ = r"""
@@ -74,7 +77,6 @@ class MaskLayered(BaseMask):
         pass
 
 
-@register_mask
 class BasicBernoulliMask(BaseMask):
     """
     The implementation of Monte Carlo Dropout (MCD) logic
@@ -114,7 +116,6 @@ class BasicBernoulliMask(BaseMask):
         return res
 
 
-@register_mask
 class DecorrelationMask(MaskLayered):
     """
     TODO:

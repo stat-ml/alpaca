@@ -1,6 +1,7 @@
 from typing import Tuple, Optional, Union, Callable
 import torch
 from tqdm import tqdm
+from functools import partial
 
 from alpaca.ue.base import UE
 from alpaca.models import Ensemble
@@ -15,7 +16,7 @@ class EnsembleMCDUE(UE):
     """
 
     _name = "EnsembleMCDUE"
-    _default_acquisition = acquisitions.std
+    _default_acquisition = partial(acquisitions.std)
 
     def __init__(
         self,
@@ -64,7 +65,7 @@ class EnsembleMCDUE(UE):
         # save `mcf_runs` stats
         if self.keep_runs is True:
             self._mcd_runs = mcd_runs
-        return predictions, self._acquisition(self, mcd_runs)
+        return predictions, self._acquisition(mcd_runs)
 
     def _create_model_from_list(self):
         self.net = Ensemble(self.net)

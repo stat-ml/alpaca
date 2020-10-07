@@ -1,6 +1,7 @@
 from typing import Tuple, Optional, Union, Callable
 import torch
 from tqdm import tqdm
+from functools import partial
 
 from alpaca.ue.base import UE
 from alpaca.ue import acquisitions
@@ -50,7 +51,7 @@ class MCDUE_regression(UE):
     """
 
     _name = "MCDUE_regression"
-    _default_acquisition = acquisitions.std
+    _default_acquisition = partial(acquisitions.std)
 
     def __init__(
         self, *args, acquisition: Optional[Union[str, Callable]] = None, **kwargs
@@ -110,7 +111,7 @@ class MCDUE_classification(UE):
     """
 
     _name = "MCDUE_classification"
-    _default_acquisition = acquisitions.bald
+    _default_acquisition = partial(acquisitions.bald)
 
     def __init__(
         self,
@@ -156,4 +157,4 @@ class MCDUE_classification(UE):
         if self.keep_runs is True:
             self._mcd_runs = mcd_runs
 
-        return predictions, self._acquisition(self, mcd_runs)
+        return predictions, self._acquisition(mcd_runs)
