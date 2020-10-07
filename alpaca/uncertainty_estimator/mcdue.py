@@ -7,7 +7,8 @@ class MCDUE:
     """
     Estimate uncertainty for samples with MCDUE approach
     """
-    def __init__(self, net, nn_runs=25, dropout_rate=.5):
+
+    def __init__(self, net, nn_runs=25, dropout_rate=0.5):
         self.net = net
         self.nn_runs = nn_runs
         self.dropout_rate = dropout_rate
@@ -18,7 +19,7 @@ class MCDUE:
         with torch.no_grad():
             for nn_run in range(self.nn_runs):
                 prediction = self.net(X_pool, dropout_rate=self.dropout_rate)
-                mcd_realizations[:, nn_run] = np.ravel(prediction.to('cpu'))
+                mcd_realizations[:, nn_run] = np.ravel(prediction.to("cpu"))
 
         return np.ravel(np.std(mcd_realizations, axis=1))
 
@@ -27,7 +28,10 @@ class MCDUEMasked:
     """
     Estimate uncertainty for samples with MCDUE approach
     """
-    def __init__(self, net, nn_runs=25, dropout_rate=.5, dropout_mask=None, keep_runs=False):
+
+    def __init__(
+        self, net, nn_runs=25, dropout_rate=0.5, dropout_mask=None, keep_runs=False
+    ):
         self.net = net
         self.nn_runs = nn_runs
         self.dropout_rate = dropout_rate
@@ -42,14 +46,20 @@ class MCDUEMasked:
 
         with torch.no_grad():
             # Some mask needs first run without dropout, i.e. decorrelation mask
-            if hasattr(self.dropout_mask, 'dry_run') and self.dropout_mask.dry_run:
-                self.net(X_pool, dropout_rate=self.dropout_rate, dropout_mask=self.dropout_mask)
+            if hasattr(self.dropout_mask, "dry_run") and self.dropout_mask.dry_run:
+                self.net(
+                    X_pool,
+                    dropout_rate=self.dropout_rate,
+                    dropout_mask=self.dropout_mask,
+                )
 
             # Get mcdue estimation
             for nn_run in range(self.nn_runs):
                 prediction = self.net(
-                    X_pool, dropout_rate=self.dropout_rate, dropout_mask=self.dropout_mask
-                ).to('cpu')
+                    X_pool,
+                    dropout_rate=self.dropout_rate,
+                    dropout_mask=self.dropout_mask,
+                ).to("cpu")
                 mcd_runs[:, nn_run] = np.ravel(prediction)
 
             if self.keep_runs:
@@ -58,16 +68,13 @@ class MCDUEMasked:
         return np.ravel(np.std(mcd_runs, axis=1))
 
     def reset(self):
-        if hasattr(self.dropout_mask, 'reset'):
+        if hasattr(self.dropout_mask, "reset"):
             self.dropout_mask.reset()
 
     def last_mcd_runs(self):
         """Return model prediction for last uncertainty estimation"""
         if not self.keep_runs:
-            print("mcd_runs: You should set `keep_runs=True` to properly use this method")
+            print(
+                "mcd_runs: You should set `keep_runs=True` to properly use this method"
+            )
         return self._mcd_runs
-
-
-
-
-

@@ -8,14 +8,15 @@ from .saver import DataSaver
 from .downloader import download
 
 
-URL = 'https://archive.ics.uci.edu/ml/machine-learning-databases/00265/CASP.csv'
+URL = "https://archive.ics.uci.edu/ml/machine-learning-databases/00265/CASP.csv"
 
 
 class ProteinStructureData:
     """Protein structure (CASP) dataset from UCI"""
+
     def __init__(self, use_cache=False, val_split=0.2):
         self.use_cache = use_cache
-        cache_dir = path.join(DATA_DIR, 'dataloader/data/protein_structure')
+        cache_dir = path.join(DATA_DIR, "dataloader/data/protein_structure")
         self.saver = DataSaver(cache_dir)
         self.val_split = val_split
         self._build_dataset(cache_dir)
@@ -30,20 +31,19 @@ class ProteinStructureData:
         return x, y
 
     def _build_dataset(self, cache_dir):
-        data_path = download(cache_dir, 'CASP.csv', URL)
+        data_path = download(cache_dir, "CASP.csv", URL)
         self.df = pd.read_csv(data_path)
         table = self.df.to_numpy()
         if self.val_split != 0:
             train, val = train_test_split(table, test_size=self.val_split, shuffle=True)
         else:
             train, val = table, []
-        self.data = {'train': train, 'val': val}
+        self.data = {"train": train, "val": val}
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     dataset = ProteinStructureData()
-    x_train, y_train = dataset.dataset('train')
-    x_val, y_val = dataset.dataset('val')
+    x_train, y_train = dataset.dataset("train")
+    x_val, y_val = dataset.dataset("val")
     print(dataset.df.head())
     print(x_train.shape, y_train.shape, y_val.shape)
-

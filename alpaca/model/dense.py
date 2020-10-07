@@ -5,7 +5,9 @@ import numpy as np
 
 
 class Dense(nn.Module):
-    def __init__(self, layer_sizes, postprocessing=lambda x: x, activation=None, dropout_rate=0):
+    def __init__(
+        self, layer_sizes, postprocessing=lambda x: x, activation=None, dropout_rate=0
+    ):
         super().__init__()
 
         if activation is None:
@@ -17,12 +19,12 @@ class Dense(nn.Module):
         self.fcs = []
         for i, layer in enumerate(layer_sizes[:-1]):
             fc = nn.Linear(layer, layer_sizes[i + 1])
-            setattr(self, 'fc' + str(i), fc)  # to register params
+            setattr(self, "fc" + str(i), fc)  # to register params
             self.fcs.append(fc)
         self.postprocessing = postprocessing
 
         self.dropout = nn.Dropout(dropout_rate)
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        device = "cuda" if torch.cuda.is_available() else "cpu"
         self.to(device)
 
     def forward(self, x, dropout_rate=0.5, dropout_mask=None):

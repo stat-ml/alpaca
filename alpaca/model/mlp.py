@@ -7,19 +7,21 @@ from alpaca.dataloader.custom_dataset import loader
 
 
 class BaseMLP(nn.Module):
-    def __init__(self, layer_sizes, activation, postprocessing=lambda x: x, device=None):
+    def __init__(
+        self, layer_sizes, activation, postprocessing=lambda x: x, device=None
+    ):
         super(BaseMLP, self).__init__()
 
         if device is None:
-            self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
         else:
             self.device = device
 
         self.layer_sizes = layer_sizes
         self.fcs = []
         for i, layer in enumerate(layer_sizes[:-1]):
-            fc = nn.Linear(layer, layer_sizes[i+1])
-            setattr(self, 'fc'+str(i), fc)  # to register params
+            fc = nn.Linear(layer, layer_sizes[i + 1])
+            setattr(self, "fc" + str(i), fc)  # to register params
             self.fcs.append(fc)
         self.postprocessing = postprocessing
         self.activation = activation
@@ -34,17 +36,25 @@ class BaseMLP(nn.Module):
             if dropout_mask is None:
                 x = nn.Dropout(dropout_rate)(x)
             else:
-                x = x*dropout_mask(x, dropout_rate, layer_num).double()
+                x = x * dropout_mask(x, dropout_rate, layer_num).double()
         x = self.fcs[-1](x)
         x = self.postprocessing(x)
         return x
 
     def fit(
-            self, train_set, val_set, epochs=10000, verbose=True,
-            validation_step=100, patience=5, batch_size=500, dropout_rate=0):
+        self,
+        train_set,
+        val_set,
+        epochs=10000,
+        verbose=True,
+        validation_step=100,
+        patience=5,
+        batch_size=500,
+        dropout_rate=0,
+    ):
         train_loader = loader(*train_set, batch_size=batch_size, shuffle=True)
 
-        best_val_loss = float('inf')
+        best_val_loss = float("inf")
         current_patience = patience
 
         # Train the model
@@ -90,39 +100,51 @@ class BaseMLP(nn.Module):
                     labels = torch.Tensor(y_scaler.inverse_transform(labels.cpu()))
                 losses.append(self.criterion(outputs, labels).item())
 
-        return sum(losses)/len(losses)
+        return sum(losses) / len(losses)
 
     def _print_status(self, epoch, epochs, loss, val_loss):
-        print('Epoch [{}/{}], Loss: {:.4f}, Validation loss: {:.4f}'
-              .format(epoch + 1, epochs, loss, val_loss))
+        print(
+            "Epoch [{}/{}], Loss: {:.4f}, Validation loss: {:.4f}".format(
+                epoch + 1, epochs, loss, val_loss
+            )
+        )
 
 
 class MLP(BaseMLP):
-    def __init__(self, layer_sizes, postprocessing=None, loss=nn.MSELoss,
-                 optimizer=None, activation=None, **kwargs):
+    def __init__(
+        self,
+        layer_sizes,
+        postprocessing=None,
+        loss=nn.MSELoss,
+        optimizer=None,
+        activation=None,
+        **kwargs
+    ):
         if postprocessing is None:
             postprocessing = lambda x: x
 
         if activation is None:
             activation = F.celu
 
-        super(MLP, self).__init__(layer_sizes, activation=activation, postprocessing=postprocessing, **kwargs)
+        super(MLP, self).__init__(
+            layer_sizes, activation=activation, postprocessing=postprocessing, **kwargs
+        )
 
         self.criterion = loss()
 
         if optimizer is None:
-            optimizer = {'type': 'Adadelta'}
+            optimizer = {"type": "Adadelta"}
         self.optimizer = self.init_optimizer(optimizer)
 
     def init_optimizer(self, optimizer):
         if isinstance(optimizer, dict):
             kwargs = optimizer.copy()
-            opt_type = getattr(torch.optim, kwargs.pop('type'))
-            kwargs['params'] = self.parameters()
+            opt_type = getattr(torch.optim, kwargs.pop("type"))
+            kwargs["params"] = self.parameters()
             optimizer = opt_type(**kwargs)
         elif not isinstance(optimizer, torch.optim.Optimizer):
             raise TypeError(
-                'optimizer must be either an Optimizer object or a dict, '
-                'but got {}'.format(type(optimizer)))
+                "optimizer must be either an Optimizer object or a dict, "
+                "but got {}".format(type(optimizer))
+            )
         return optimizer
-

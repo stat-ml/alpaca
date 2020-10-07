@@ -6,6 +6,7 @@ class EagerSampleSelector:
     Move samples from pool dataset to train dataset
     Takes samples with highest uncertainty first
     """
+
     def update_sets(self, X_train, y_train, X_pool, ue_values, sample_size, oracle):
         """
         Update X_train and X_pool by choosing points with highest uncertainty estimations.
@@ -33,14 +34,15 @@ class EagerSampleSelector:
 
 
 class StochasticSampleSelector(EagerSampleSelector):
-        """
-        Move samples from pool dataset to train dataset
-        Takes samples with probability propotional to uncertainty
-        """
-        @staticmethod
-        def sample(uncertainty, sample_size):
-            indexes = np.arange(len(uncertainty))
-            uncertainty = uncertainty.astype('double')
-            uncertainty[uncertainty<0] = 0
-            probabilities = uncertainty / np.sum(uncertainty)
-            return np.random.choice(indexes, sample_size, replace=False, p=probabilities)
+    """
+    Move samples from pool dataset to train dataset
+    Takes samples with probability propotional to uncertainty
+    """
+
+    @staticmethod
+    def sample(uncertainty, sample_size):
+        indexes = np.arange(len(uncertainty))
+        uncertainty = uncertainty.astype("double")
+        uncertainty[uncertainty < 0] = 0
+        probabilities = uncertainty / np.sum(uncertainty)
+        return np.random.choice(indexes, sample_size, replace=False, p=probabilities)

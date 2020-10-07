@@ -8,26 +8,33 @@ from scipy.special import softmax
 from dppy.finite_dpps import FiniteDPP
 
 
-DEFAULT_MASKS = ['mc_dropout', 'ht_decorrelating', 'ht_dpp', 'ht_k_dpp', 'ht_leverages', 'cov_leverages']
+DEFAULT_MASKS = [
+    "mc_dropout",
+    "ht_decorrelating",
+    "ht_dpp",
+    "ht_k_dpp",
+    "ht_leverages",
+    "cov_leverages",
+]
 
 
 # It's better to use this function to get the mask then call them directly
 def build_masks(names=None, **kwargs):
     masks = {
-        'basic_bern': BasicBernoulliMask(),
-        'mc_dropout': BasicBernoulliMask(),
-        'decorrelating': DecorrelationMask(),
-        'decorrelating_sc': DecorrelationMask(scaling=True),
-        'ht_decorrelating': DecorrelationMask(scaling=True, ht_norm=True),
-        'dpp': DPPMask(),
-        'k_dpp': KDPPMask(),
-        'k_dpp_noisereg': KDPPMask(noise_level=kwargs.get('noise_level', 1e-2)),
-        'ht_dpp': DPPMask(ht_norm=True),
-        'ht_k_dpp': KDPPMask(ht_norm=True),
-        'cov_dpp': DPPMask(ht_norm=True, covariance=True),
-        'cov_k_dpp': KDPPMask(ht_norm=True, covariance=True),
-        'ht_leverages': LeverageScoreMask(ht_norm=True, lambda_=1),
-        'cov_leverages': LeverageScoreMask(ht_norm=True, lambda_=1, covariance=True),
+        "basic_bern": BasicBernoulliMask(),
+        "mc_dropout": BasicBernoulliMask(),
+        "decorrelating": DecorrelationMask(),
+        "decorrelating_sc": DecorrelationMask(scaling=True),
+        "ht_decorrelating": DecorrelationMask(scaling=True, ht_norm=True),
+        "dpp": DPPMask(),
+        "k_dpp": KDPPMask(),
+        "k_dpp_noisereg": KDPPMask(noise_level=kwargs.get("noise_level", 1e-2)),
+        "ht_dpp": DPPMask(ht_norm=True),
+        "ht_k_dpp": KDPPMask(ht_norm=True),
+        "cov_dpp": DPPMask(ht_norm=True, covariance=True),
+        "cov_k_dpp": KDPPMask(ht_norm=True, covariance=True),
+        "ht_leverages": LeverageScoreMask(ht_norm=True, lambda_=1),
+        "cov_leverages": LeverageScoreMask(ht_norm=True, lambda_=1, covariance=True),
     }
     if names is None:
         return masks
@@ -44,8 +51,9 @@ class BasicBernoulliMask:
         p = 1 - dropout_rate
 
         if p < 0 or p > 1:
-            raise ValueError("dropout probability has to be between 0 and 1, "
-                             "but got {}".format(p))
+            raise ValueError(
+                "dropout probability has to be between 0 and 1, " "but got {}".format(p)
+            )
 
         noise = torch.zeros(x.shape[-1]).double().to(x.device)
         # noise = self._make_noise(x)
@@ -82,7 +90,7 @@ class DecorrelationMask:
             mask_len = x.shape[-1]
 
             noise = 1e-8 * np.random.rand(*x_matrix.shape)  # to prevent degeneration
-            corrs = np.sum(np.abs(np.corrcoef((x_matrix+noise).T)), axis=1)
+            corrs = np.sum(np.abs(np.corrcoef((x_matrix + noise).T)), axis=1)
             scores = np.reciprocal(corrs)
             if self.scaling:
                 scores = 4 * scores / max(scores)
@@ -90,10 +98,12 @@ class DecorrelationMask:
 
             if self.ht_norm:
                 # Horvitz-Thopson normalization (1/marginal_prob for each element)
-                k = int(mask_len*(1-dropout_rate))
+                k = int(mask_len * (1 - dropout_rate))
                 probabilities = self.layer_correlations[layer_num]
-                samples = max(1000, 4*x.shape[-1])
-                self.norm[layer_num] = np.reciprocal(mc_probability(probabilities, k, samples))
+                samples = max(1000, 4 * x.shape[-1])
+                self.norm[layer_num] = np.reciprocal(
+                    mc_probability(probabilities, k, samples)
+                )
             # Initially we should pass identity mask,
             # otherwise we won't get right correlations for all layers
             mask = torch.ones(mask_len).to(x.device)
@@ -101,8 +111,10 @@ class DecorrelationMask:
 
         mask_len = x.shape[-1]
         mask = torch.zeros(mask_len).double().to(x.device)
-        k = int(mask_len*(1-dropout_rate))
-        ids = np.random.choice(len(mask), k, p=self.layer_correlations[layer_num], replace=False)
+        k = int(mask_len * (1 - dropout_rate))
+        ids = np.random.choice(
+            len(mask), k, p=self.layer_correlations[layer_num], replace=False
+        )
 
         if self.ht_norm:
             mask[ids] = torch.DoubleTensor(self.norm[layer_num][ids]).to(x.device)
@@ -136,7 +148,7 @@ class LeverageScoreMask:
             else:
                 K = np.corrcoef(x_matrix.T)
             I = np.eye(len(K))
-            leverages_matrix = np.dot(K, np.linalg.inv(K+self.lambda_*I))
+            leverages_matrix = np.dot(K, np.linalg.inv(K + self.lambda_ * I))
             probabilities = np.diagonal(leverages_matrix)
             probabilities = probabilities / sum(probabilities)
             self.layer_correlations[layer_num] = probabilities
@@ -144,15 +156,19 @@ class LeverageScoreMask:
             if self.ht_norm:
                 # Horvitz-Thopson normalization (1/marginal_prob for each element)
                 probabilities = self.layer_correlations[layer_num]
-                samples = max(1000, 4*x.shape[-1])
-                self.norm[layer_num] = np.reciprocal(mc_probability(probabilities, k, samples))
+                samples = max(1000, 4 * x.shape[-1])
+                self.norm[layer_num] = np.reciprocal(
+                    mc_probability(probabilities, k, samples)
+                )
             # Initially we should pass identity mask,
             # otherwise we won't get right correlations for all layers
             mask = torch.ones(mask_len).to(x.device)
             return mask
 
         mask = torch.zeros(mask_len).double().to(x.device)
-        ids = np.random.choice(len(mask), k, p=self.layer_correlations[layer_num], replace=False)
+        ids = np.random.choice(
+            len(mask), k, p=self.layer_correlations[layer_num], replace=False
+        )
 
         if self.ht_norm:
             mask[ids] = torch.DoubleTensor(self.norm[layer_num][ids]).to(x.device)
@@ -171,7 +187,9 @@ ATTEMPTS = 30
 class DPPMask:
     def __init__(self, ht_norm=False, covariance=False):
         self.dpps = {}
-        self.layer_correlations = {}  # keep for debug purposes # Flag for uncertainty estimator to make first run without taking the result
+        self.layer_correlations = (
+            {}
+        )  # keep for debug purposes # Flag for uncertainty estimator to make first run without taking the result
         self.dry_run = True
         self.ht_norm = ht_norm
         self.norm = {}
@@ -184,13 +202,15 @@ class DPPMask:
 
             self.x_matrix = x_matrix
             micro = 1e-12
-            x_matrix += np.random.random(x_matrix.shape) * micro  # for computational stability
+            x_matrix += (
+                np.random.random(x_matrix.shape) * micro
+            )  # for computational stability
             if self.covariance:
                 L = np.cov(x_matrix.T)
             else:
                 L = np.corrcoef(x_matrix.T)
 
-            self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': L})
+            self.dpps[layer_num] = FiniteDPP("likelihood", **{"L": L})
             self.layer_correlations[layer_num] = L
 
             if self.ht_norm:
@@ -198,7 +218,9 @@ class DPPMask:
                 I = torch.eye(len(L)).double().cuda()
                 K = torch.mm(L, torch.inverse(L + I))
 
-                self.norm[layer_num] = torch.reciprocal(torch.diag(K))  # / len(correlations)
+                self.norm[layer_num] = torch.reciprocal(
+                    torch.diag(K)
+                )  # / len(correlations)
                 self.L = L
                 self.K = K
 
@@ -236,21 +258,24 @@ def get_nu(eigen_values, k):
     :return: tilting coefficient
     """
     values = eigen_values + 1e-14
+
     def point(nu):
         exp_nu = np.exp(nu)
-        expect = np.sum([val*exp_nu / (1 + exp_nu*val) for val in values])
+        expect = np.sum([val * exp_nu / (1 + exp_nu * val) for val in values])
         return expect - k
 
     try:
-        solution = root_scalar(point, bracket=[-10., 10.])
+        solution = root_scalar(point, bracket=[-10.0, 10.0])
         assert solution.converged
         return solution.root
     except (ValueError, AssertionError):
-        raise ValueError('k-dpp: Probably too small matrix rank for the k')
+        raise ValueError("k-dpp: Probably too small matrix rank for the k")
 
 
 class KDPPMask:
-    def __init__(self, noise_level=None, tol_level=1e-3, ht_norm=False, covariance=False):
+    def __init__(
+        self, noise_level=None, tol_level=1e-3, ht_norm=False, covariance=False
+    ):
         self.layer_correlations = {}
         self.dry_run = True
         self.dpps = {}
@@ -272,7 +297,7 @@ class KDPPMask:
 
     def __call__(self, x, dropout_rate=0.5, layer_num=0):
         mask_len = x.shape[-1]
-        k = int(mask_len * (1-dropout_rate))
+        k = int(mask_len * (1 - dropout_rate))
 
         if layer_num not in self.layer_correlations:
             x_matrix = x.cpu().numpy()
@@ -286,7 +311,7 @@ class KDPPMask:
                 L += self.noise_level * np.eye(len(L))
 
             if not self.ht_norm:
-                self.dpps[layer_num] = FiniteDPP('likelihood', **{'L': L})
+                self.dpps[layer_num] = FiniteDPP("likelihood", **{"L": L})
                 self.dpps[layer_num].sample_exact()  # to trigger eig values generation
             else:
                 eigen_values = np.linalg.eigh(L)[0]
@@ -295,7 +320,9 @@ class KDPPMask:
                 I = torch.eye(len(L)).to(x.device)
                 L_tilted = np.exp(nu) * torch.DoubleTensor(L).to(x.device)
                 K_tilted = torch.mm(L_tilted, torch.inverse(L_tilted + I)).double()
-                self.dpps[layer_num] = FiniteDPP('correlation', **{"K": K_tilted.detach().cpu().numpy()})
+                self.dpps[layer_num] = FiniteDPP(
+                    "correlation", **{"K": K_tilted.detach().cpu().numpy()}
+                )
                 self.norm[layer_num] = torch.reciprocal(torch.diag(K_tilted))
                 self.L = L_tilted
                 self.K = K_tilted

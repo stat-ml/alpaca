@@ -6,27 +6,27 @@ from .bald import Bald, BaldMasked, BaldEnsemble
 
 
 def build_estimator(name, model, **kwargs):
-    if name == 'nngp':
+    if name == "nngp":
         estimator = NNGPRegression(model, **kwargs)
-    elif name == 'random':
+    elif name == "random":
         estimator = RandomEstimator()
-    elif name == 'mcdue':
+    elif name == "mcdue":
         estimator = MCDUE(model, **kwargs)
-    elif name == 'mcdue_masked':
+    elif name == "mcdue_masked":
         estimator = MCDUEMasked(model, **kwargs)
-    elif name == 'bald':
+    elif name == "bald":
         estimator = Bald(model, **kwargs)
-    elif name == 'bald_masked':
+    elif name == "bald_masked":
         estimator = BaldMasked(model, **kwargs)
-    elif name == 'bald_ensemble':
+    elif name == "bald_ensemble":
         estimator = BaldEnsemble(model, **kwargs)
-    elif name == 'eue_nll':
+    elif name == "eue_nll":
         estimator = EnsembleNLLUE(model)
-    elif name == 'eue':
+    elif name == "eue":
         estimator = EnsembleUE(model)
-    elif name == 'emcdue':
+    elif name == "emcdue":
         estimator = EnsembleMCDUE(model, **kwargs)
-    elif name == 'emcdue_masked':
+    elif name == "emcdue_masked":
         estimator = EnsembleMCDUEMasked(model, **kwargs)
     else:
         raise ValueError("Wrong estimator name")

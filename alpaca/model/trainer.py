@@ -6,14 +6,23 @@ from torch.utils.data import TensorDataset, DataLoader
 
 class Trainer:
     def __init__(
-            self, model, batch_size=128, lr=1e-3, dropout_train=0.5, weight_decay=1e-4,
-            loss=None, regression=False):
+        self,
+        model,
+        batch_size=128,
+        lr=1e-3,
+        dropout_train=0.5,
+        weight_decay=1e-4,
+        loss=None,
+        regression=False,
+    ):
         self.model = model
-        self.device = 'cuda'
+        self.device = "cuda"
         self.model.to(self.device)
 
         # self.optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-        self.optimizer = torch.optim.Adadelta(model.parameters(), weight_decay=weight_decay)
+        self.optimizer = torch.optim.Adadelta(
+            model.parameters(), weight_decay=weight_decay
+        )
         self.dropout_train = dropout_train
         self.batch_size = batch_size
 
@@ -23,7 +32,16 @@ class Trainer:
         self.val_loss_history = []
         self.train_loss_history = []
 
-    def fit(self, train_set, val_set, epochs=10, log_interval=1000, verbose=False, patience=5, dropout_rate=None):
+    def fit(
+        self,
+        train_set,
+        val_set,
+        epochs=10,
+        log_interval=1000,
+        verbose=False,
+        patience=5,
+        dropout_rate=None,
+    ):
         if dropout_rate is None:
             dropout_rate = self.dropout_train
 
@@ -43,7 +61,9 @@ class Trainer:
                 self.optimizer.step()
 
                 if verbose:
-                    self._report(epoch, loss, data, batch_idx, log_interval, loader, val_loader)
+                    self._report(
+                        epoch, loss, data, batch_idx, log_interval, loader, val_loader
+                    )
 
             if not self._check_patience(val_loader):
                 break
@@ -51,7 +71,7 @@ class Trainer:
     def _set_patience(self, patience):
         self.start_patience = patience
         self.current_patience = self.start_patience
-        self.best_loss = float('inf')
+        self.best_loss = float("inf")
 
     def _check_patience(self, val_loader):
         loss = self.evaluate(val_loader)
@@ -67,9 +87,16 @@ class Trainer:
         if (batch_idx + 1) % log_interval == 0 or batch_idx == len(loader) - 1:
             val_loss = self.evaluate(val_loader)
             percent = batch_idx / len(loader)
-            print("Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}\tVal Loss: {:.6f}".format(
-                epoch, int(percent*len(loader.dataset)), len(loader.dataset), 100 * percent,
-                loss.item(), val_loss))
+            print(
+                "Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}\tVal Loss: {:.6f}".format(
+                    epoch,
+                    int(percent * len(loader.dataset)),
+                    len(loader.dataset),
+                    100 * percent,
+                    loss.item(),
+                    val_loss,
+                )
+            )
 
             self.val_loss_history.append(val_loss)
             self.train_loss_history.append(loss)
@@ -110,11 +137,13 @@ class Trainer:
             if self.regression:
                 ds = TensorDataset(torch.FloatTensor(x), torch.FloatTensor(y))
             else:
-                ds = TensorDataset(torch.FloatTensor(x), torch.LongTensor(y.reshape(-1)))
+                ds = TensorDataset(
+                    torch.FloatTensor(x), torch.LongTensor(y.reshape(-1))
+                )
         loader = DataLoader(ds, batch_size=self.batch_size, shuffle=shuffle)
         return loader
 
-    def __call__(self, x, dropout_rate=0., dropout_mask=None):
+    def __call__(self, x, dropout_rate=0.0, dropout_mask=None):
         x = torch.FloatTensor(x).to(self.device)
         return self.model(x, dropout_rate=dropout_rate, dropout_mask=dropout_mask)
 
@@ -127,14 +156,21 @@ class Trainer:
 
 class EnsembleTrainer:
     def __init__(
-            self, model_class, model_kwargs, n_models, batch_size=128,
-            dropout_train=0.5, reduction='mean'):
+        self,
+        model_class,
+        model_kwargs,
+        n_models,
+        batch_size=128,
+        dropout_train=0.5,
+        reduction="mean",
+    ):
         self.models = [model_class(**model_kwargs) for _ in range(n_models)]
         self.trainers = [
             Trainer(model, batch_size=batch_size, dropout_train=dropout_train)
-            for model in self.models]
+            for model in self.models
+        ]
         self.reduction = reduction
-        self.device = 'cuda'
+        self.device = "cuda"
 
     def fit(self, train_set, val_set, **kwargs):
         for trainer in self.trainers:
@@ -150,15 +186,17 @@ class EnsembleTrainer:
     def evaluate(self, val_loader):
         return np.mean([trainer.evaluate(val_loader) for trainer in self.trainers])
 
-    def __call__(self, x, reduction='default', **kwargs):
-        res = torch.stack([torch.Tensor(trainer.predict(x, logits=True)) for trainer in self.trainers])
+    def __call__(self, x, reduction="default", **kwargs):
+        res = torch.stack(
+            [torch.Tensor(trainer.predict(x, logits=True)) for trainer in self.trainers]
+        )
 
-        if reduction == 'default':
+        if reduction == "default":
             reduction = self.reduction
 
         if reduction is None:
             res = res
-        elif reduction == 'mean':
+        elif reduction == "mean":
             res = res.mean(dim=0)
 
         return res

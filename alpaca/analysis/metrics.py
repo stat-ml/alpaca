@@ -12,10 +12,10 @@ def get_uq_metrics(estimations, errors, acc_percentile=0.1, **kwargs):
 
 def uq_accuracy(uq, errors, percentile=0.1):
     """Shows intersection of worst by error/uq in percentile"""
-    k = int(len(uq)*percentile)
+    k = int(len(uq) * percentile)
     worst_uq = np.argsort(np.ravel(uq))[-k:]
     worst_error = np.argsort(np.ravel(errors))[-k:]
-    return len(set(worst_uq).intersection(set(worst_error)))/k
+    return len(set(worst_uq).intersection(set(worst_error))) / k
 
 
 def dcg(relevances, scores, k):
@@ -29,7 +29,7 @@ def dcg(relevances, scores, k):
     ranking = np.argsort(scores)[::-1]
     metric = 0
     for rank, score_id in enumerate(ranking[:k]):
-        metric += relevances[score_id] / log2(rank+2)
+        metric += relevances[score_id] / log2(rank + 2)
 
     return metric
 
@@ -61,4 +61,4 @@ def uq_ndcg(errors, uq, bins=None):
 def uq_ll(errors, uq):
     errors = np.ravel(errors)
     uq_squared = np.square(np.ravel(uq)) + 1e-10
-    return -np.mean(np.log(uq_squared)/2 + np.square(errors)/2/uq_squared)
+    return -np.mean(np.log(uq_squared) / 2 + np.square(errors) / 2 / uq_squared)

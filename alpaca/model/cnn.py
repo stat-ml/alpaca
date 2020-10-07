@@ -12,12 +12,12 @@ class SimpleConv(nn.Module):
         super().__init__()
         self.conv1 = nn.Conv2d(1, 16, 3)
         self.conv2 = nn.Conv2d(16, 32, 3)
-        self.linear_size = 12*12*32
+        self.linear_size = 12 * 12 * 32
         self.fc1 = nn.Linear(self.linear_size, 256)
         self.dropout = nn.Dropout(dropout_rate)
         self.fc2 = nn.Linear(256, num_classes)
 
-    def forward(self, x, dropout_rate=0., dropout_mask=None):
+    def forward(self, x, dropout_rate=0.0, dropout_mask=None):
         x = self.activation(self.conv1(x))
         x = self.activation(self.conv2(x))
         x = F.max_pool2d(x, 2, 2)
@@ -49,11 +49,11 @@ class StrongConv(nn.Module):
         self.conv21 = nn.Conv2d(16, 32, 3, padding=1)
         self.conv22 = nn.Conv2d(32, 32, 3, padding=1)
 
-        self.linear_size = 8*8*32
+        self.linear_size = 8 * 8 * 32
         self.fc1 = nn.Linear(self.linear_size, 256)
         self.fc2 = nn.Linear(256, num_classes)
 
-    def forward(self, x, dropout_rate=0., dropout_mask=None):
+    def forward(self, x, dropout_rate=0.0, dropout_mask=None):
         x = F.relu(self.conv11(x))
         x = F.relu(self.conv12(x))
         x = F.max_pool2d(x, 2, 2)
@@ -84,12 +84,12 @@ class MediumConv(nn.Module):
         super().__init__()
         self.conv1 = nn.Conv2d(3, 16, 3)
         self.conv2 = nn.Conv2d(16, 32, 3)
-        self.linear_size = 14*14*32
+        self.linear_size = 14 * 14 * 32
         self.fc1 = nn.Linear(self.linear_size, 256)
         self.dropout = nn.Dropout(0.5)
         self.fc2 = nn.Linear(256, num_classes)
 
-    def forward(self, x, dropout_rate=0., dropout_mask=None):
+    def forward(self, x, dropout_rate=0.0, dropout_mask=None):
         x = F.elu(self.conv1(x))
         x = F.elu(self.conv2(x))
         x = F.max_pool2d(x, 2, 2)
@@ -117,7 +117,7 @@ class AnotherConv(nn.Module):
         super().__init__()
         self.conv1 = nn.Conv2d(3, 16, 3)
         self.conv2 = nn.Conv2d(16, 32, 3)
-        self.linear_size = 14*14*32
+        self.linear_size = 14 * 14 * 32
         self.fc1 = nn.Linear(self.linear_size, 256)
         self.dropout = nn.Dropout(0.5)
         self.fc2 = nn.Linear(256, 10)

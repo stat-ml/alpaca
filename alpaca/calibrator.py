@@ -59,8 +59,13 @@ def compute_sce(nbins, probs, labels):
     dict_class_probs = _split_into_classes(labels, probs)
     for item in dict_class_probs.keys():
         ece_values_for_each_class.append(
-            compute_ece(nbins, dict_class_probs[item], np.array([item] * np.shape(dict_class_probs[item])[0]),
-                        len(labels)))
+            compute_ece(
+                nbins,
+                dict_class_probs[item],
+                np.array([item] * np.shape(dict_class_probs[item])[0]),
+                len(labels),
+            )
+        )
     return sum(ece_values_for_each_class) / len(dict_class_probs.keys())
 
 
@@ -118,6 +123,7 @@ def compute_tace(threshold, probs, labels, R):
     chosen_labels, chosen_probs = _choose_data(threshold, probs, labels)
     return compute_ace(R, chosen_probs, chosen_labels)
 
+
 class ModelWithTempScaling(nn.Module):
     """
     A wrapper for a model with temperature scaling
@@ -125,6 +131,7 @@ class ModelWithTempScaling(nn.Module):
     model: a classification neural network
     n_classes: number of classes in the dataset
     """
+
     def __init__(self, model):
         super(ModelWithTempScaling, self).__init__()
         self.model = model
@@ -162,7 +169,8 @@ class ModelWithVectScaling(nn.Module):
         super(ModelWithVectScaling, self).__init__()
         self.model = model
         self.W_and_b = nn.Parameter(
-            torch.cat((torch.ones(n_classes), torch.zeros(n_classes)), dim=0))
+            torch.cat((torch.ones(n_classes), torch.zeros(n_classes)), dim=0)
+        )
 
     def forward(self, input):
         logits = self.model(input)
@@ -170,8 +178,8 @@ class ModelWithVectScaling(nn.Module):
 
     def scaling_logits(self, logits):
         # logits and labels must be from calibration dataset
-        W = torch.diag(self.W_and_b[:logits.shape[1]])
-        b = self.W_and_b[logits.shape[1]:]
+        W = torch.diag(self.W_and_b[: logits.shape[1]])
+        b = self.W_and_b[logits.shape[1] :]
         b = b.unsqueeze(0).expand(logits.shape[0], -1)
         return torch.mm(logits.float(), W) + b
 
@@ -195,6 +203,7 @@ class ModelWithMatrScaling(nn.Module):
     model: a classification neural network
     n_classes: number of classes in the dataset
     """
+
     def __init__(self, model, n_classes):
         super(ModelWithMatrScaling, self).__init__()
         self.model = model
@@ -236,7 +245,7 @@ def binary_histogram_binning(num_bins, probs, labels, probs_to_calibrate):
     indexes_list = np.digitize(probs, bins) - 1
     theta = np.zeros(num_bins)
     for i in range(len(bins)):
-        binn = (indexes_list == i)
+        binn = indexes_list == i
         binn_len = np.sum(binn)
         if binn_len != 0:
             theta[i] = np.sum(labels[binn]) / binn_len
@@ -258,7 +267,11 @@ def multiclass_histogram_binning(num_bins, logits, labels, logits_to_calibrate):
     probs_to_calibrate = softmax(logits_to_calibrate, axis=1)
     binning_res = []
     for k in range(np.shape(probs)[1]):
-        binning_res.append(binary_histogram_binning(num_bins, probs[:, k], labels == k, probs_to_calibrate[:, k]))
+        binning_res.append(
+            binary_histogram_binning(
+                num_bins, probs[:, k], labels == k, probs_to_calibrate[:, k]
+            )
+        )
     binning_res = np.vstack(binning_res).T
     cal_confs = binning_res / (np.sum(binning_res, axis=1)[:, None])
     return cal_confs

@@ -80,16 +80,21 @@ def train_autoencoder(epoch, train_loader, log_interval, model, optimizer):
         train_loss += loss.item()
         optimizer.step()
         if batch_idx % log_interval == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch,
-                batch_idx * len(data),
-                len(train_loader.dataset),
-                100. * batch_idx / len(train_loader),
-                loss.item() / len(data)
-            ))
+            print(
+                "Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(
+                    epoch,
+                    batch_idx * len(data),
+                    len(train_loader.dataset),
+                    100.0 * batch_idx / len(train_loader),
+                    loss.item() / len(data),
+                )
+            )
 
-    print('====> Epoch: {} Average loss: {:.4f}'.format(
-        epoch, train_loss / len(train_loader.dataset)))
+    print(
+        "====> Epoch: {} Average loss: {:.4f}".format(
+            epoch, train_loss / len(train_loader.dataset)
+        )
+    )
 
 
 def test_autoencoder(test_loader, model):
@@ -100,23 +105,20 @@ def test_autoencoder(test_loader, model):
         data = Variable(data)
         recon_batch, mu, logvar = model(data)
         test_loss += loss_function(
-            recon_batch,
-            data.view(-1, 1, 28, 28),
-            mu,
-            logvar
+            recon_batch, data.view(-1, 1, 28, 28), mu, logvar
         ).item()
 
     test_loss /= len(test_loader.dataset)
-    print('====> Test set loss: {:.4f}'.format(test_loss))
+    print("====> Test set loss: {:.4f}".format(test_loss))
 
 
 def show_encoded_decoded_images(images, figsize=(5, 20), cols=5, titles=None):
-    assert ((titles is None) or (len(images) == len(titles)))
+    assert (titles is None) or (len(images) == len(titles))
     n_images = len(images)
     fig = plt.figure(figsize=figsize)
 
-    if titles is None: titles = ['Image (%d)' % i for i in
-                                 range(1, n_images + 1)]
+    if titles is None:
+        titles = ["Image (%d)" % i for i in range(1, n_images + 1)]
     for n, (image, title) in enumerate(zip(images, titles)):
 
         a = fig.add_subplot(cols, np.ceil(n_images / float(cols)), n + 1)
@@ -124,10 +126,10 @@ def show_encoded_decoded_images(images, figsize=(5, 20), cols=5, titles=None):
             plt.gray()
         plt.imshow(image)
         if n == 0:
-            plt.title('Original image')
+            plt.title("Original image")
         elif n == 1:
-            plt.title('Decoded')
-        plt.axis('off')
+            plt.title("Decoded")
+        plt.axis("off")
     plt.show()
 
 
@@ -137,30 +139,22 @@ def show_decoder_quality(mini_batch, model):
     print(data)
     print(data.shape)
     recon_batch, _, _ = model(data)
-    decoded = recon_batch.cpu().data.numpy(
-    ).reshape(25, 28, 28)
-    to_encode = mini_batch.numpy().reshape(25, 28, 28) #[:, 0, :, :]
+    decoded = recon_batch.cpu().data.numpy().reshape(25, 28, 28)
+    to_encode = mini_batch.numpy().reshape(25, 28, 28)  # [:, 0, :, :]
 
     alternated = np.zeros((50, 28, 28))
     alternated[0::2] = to_encode
     alternated[1::2] = decoded
 
-    show_encoded_decoded_images(
-        alternated,
-        cols=25
-    )
+    show_encoded_decoded_images(alternated, cols=25)
 
 
 def create_latent_space_results_mc(
-        mesh_min,
-        mesh_max,
-        model,
-        vae,
-        delim=0.1,
-        num_inferences=50
+    mesh_min, mesh_max, model, vae, delim=0.1, num_inferences=50
 ):
-    latent_X, latent_Y = np.meshgrid(np.arange(mesh_min, mesh_max, delim),
-                                     np.arange(mesh_min, mesh_max, delim))
+    latent_X, latent_Y = np.meshgrid(
+        np.arange(mesh_min, mesh_max, delim), np.arange(mesh_min, mesh_max, delim)
+    )
     all_results = []
 
     row_length = latent_X.shape[0]
@@ -197,8 +191,7 @@ def create_latent_space_results_mc(
 
 def create_latent_space_results_is(mesh_min, mesh_max, model, vae, delim=0.1):
     latent_X, latent_Y = np.meshgrid(
-        np.arange(mesh_min, mesh_max, delim),
-        np.arange(mesh_min, mesh_max, delim)
+        np.arange(mesh_min, mesh_max, delim), np.arange(mesh_min, mesh_max, delim)
     )
     all_results = []
 
@@ -222,18 +215,18 @@ def create_latent_space_results_is(mesh_min, mesh_max, model, vae, delim=0.1):
 
 
 def plot_latent_space(
-        latent_X,
-        latent_Y,
-        uncertainty,
-        xses,
-        yses,
-        title,
-        alpha_latent=0.8,
-        alpha_training=0.05,
-        size_latent=80,
-        size_training=20,
-        norm=True,
-        savepath=None
+    latent_X,
+    latent_Y,
+    uncertainty,
+    xses,
+    yses,
+    title,
+    alpha_latent=0.8,
+    alpha_training=0.05,
+    size_latent=80,
+    size_training=20,
+    norm=True,
+    savepath=None,
 ):
 
     plt.figure(figsize=(15, 15), frameon=False)
@@ -241,8 +234,9 @@ def plot_latent_space(
     con_yses = yses
 
     if norm:
-        norm_ = colors.LogNorm(vmin=uncertainty.flatten().min(),
-                               vmax=uncertainty.flatten().max())
+        norm_ = colors.LogNorm(
+            vmin=uncertainty.flatten().min(), vmax=uncertainty.flatten().max()
+        )
     else:
         norm_ = None
 
@@ -253,9 +247,8 @@ def plot_latent_space(
         alpha=alpha_latent,
         c=uncertainty.flatten(),
         norm=norm_,
-        cmap='gray',
-        marker='s'
-
+        cmap="gray",
+        marker="s",
     )
 
     for i in range(10):
@@ -264,7 +257,7 @@ def plot_latent_space(
             xses[:, 1][con_yses == i],
             s=size_training,
             alpha=alpha_training,
-            label=i
+            label=i,
         )
 
     plt.title(title)
@@ -273,18 +266,17 @@ def plot_latent_space(
         spine.set_visible(False)
 
     if savepath:
-        plt.savefig(savepath, bbox_inches = 'tight', pad_inches = 0)
+        plt.savefig(savepath, bbox_inches="tight", pad_inches=0)
 
 
-def show_decoded_latent_space(vae, savepath='images/vae_decoded.png'):
+def show_decoded_latent_space(vae, savepath="images/vae_decoded.png"):
     X2, Y2 = np.meshgrid(
         np.arange(-10, 10, 1),
         np.arange(-10, 10, 1),
     )
 
     input_2 = np.concatenate([X2.reshape(-1, 1), Y2.reshape(-1, 1)], axis=1)
-    inf01 = vae.decode(
-        Variable(torch.Tensor(input_2)).cuda()).cpu().data.numpy()
+    inf01 = vae.decode(Variable(torch.Tensor(input_2)).cuda()).cpu().data.numpy()
     inf_manifold2 = inf01.reshape(20, 20, 28, 28)
     fig = plt.figure(figsize=(15, 15))
 
@@ -292,6 +284,6 @@ def show_decoded_latent_space(vae, savepath='images/vae_decoded.png'):
         for j in range(20):
             fig.add_subplot(20, 20, i * 20 + j + 1)
             plt.imshow(inf_manifold2[i, j, :, :])
-            plt.axis('off')
+            plt.axis("off")
 
     plt.savefig(savepath)

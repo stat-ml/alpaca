@@ -8,7 +8,7 @@ from .saver import DataSaver
 from .downloader import download
 
 
-URL = 'http://yaroslavvb.com/upload/notMNIST/notMNIST_large.tar.gz'
+URL = "http://yaroslavvb.com/upload/notMNIST/notMNIST_large.tar.gz"
 
 
 class NotMNISTData:
@@ -16,7 +16,7 @@ class NotMNISTData:
         raise NotImplementedError
 
         self.use_cache = use_cache
-        cache_dir = Path(ROOT_DIR)/'dataloader'/'data'/'not_mnist'
+        cache_dir = Path(ROOT_DIR) / "dataloader" / "data" / "not_mnist"
         self.saver = DataSaver(cache_dir)
         self.val_split = val_split
         self._build_dataset(cache_dir)
@@ -31,12 +31,14 @@ class NotMNISTData:
         return x, y
 
     def _build_dataset(self, cache_dir):
-        data_path = download(cache_dir, 'notMNIST_small.tar.gz', URL)
-        import ipdb; ipdb.set_trace()
+        data_path = download(cache_dir, "notMNIST_small.tar.gz", URL)
+        import ipdb
+
+        ipdb.set_trace()
         with tarfile.open(data_path, "r:gz") as tar_ref:
             tar_ref.extractall(cache_dir)
 
-        base_dir = cache_dir / 'notMNIST_small'
+        base_dir = cache_dir / "notMNIST_small"
 
         class_dirs = sorted(os.listdir(base_dir))
         # with zipfile.ZipFile(data_path, 'r') as zip_ref:
@@ -50,10 +52,10 @@ class NotMNISTData:
         # }
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     dataset = NotMNISTData()
-    x_train, y_train = dataset.dataset('train')
-    x_val, y_val = dataset.dataset('val')
+    x_train, y_train = dataset.dataset("train")
+    x_val, y_val = dataset.dataset("val")
     print(x_train.shape, y_train.shape, y_val.shape)
     print(x_train[:5])
     print(y_train[:5])

@@ -5,10 +5,12 @@ from alpaca.dataloader.utils import loader
 
 
 class AutoEncoder(nn.Module):
-    def __init__(self, input_size, hidden_size, embedding_size, lr=1e-3, dropout_rate=0.3):
+    def __init__(
+        self, input_size, hidden_size, embedding_size, lr=1e-3, dropout_rate=0.3
+    ):
         super(AutoEncoder, self).__init__()
 
-        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.input_size = input_size
 
         self.fc1 = nn.Linear(input_size, hidden_size)
@@ -31,7 +33,7 @@ class AutoEncoder(nn.Module):
 
     def predict(self, x):
         self.eval()
-        x = torch.DoubleTensor(x).to('cuda')
+        x = torch.DoubleTensor(x).to("cuda")
         return self(x).cpu().detach().numpy()
 
     def forward(self, x):
@@ -51,7 +53,7 @@ class AutoEncoder(nn.Module):
             loss.backward()
             train_loss += loss.item()
             self.optimizer.step()
-        return train_loss/len(x_train)
+        return train_loss / len(x_train)
 
     def evaluate(self, x_val):
         self.eval()
@@ -71,7 +73,7 @@ class VAE(nn.Module):
     def __init__(self, input_size, hidden_size, embedding_size):
         super(VAE, self).__init__()
 
-        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.input_size = input_size
 
         self.fc1 = nn.Linear(input_size, hidden_size)
@@ -89,9 +91,9 @@ class VAE(nn.Module):
         return self.fc21(h1), self.fc22(h1)
 
     def reparameterize(self, mu, logvar):
-        std = torch.exp(0.5*logvar)
+        std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
-        return mu + eps*std
+        return mu + eps * std
 
     def decode(self, z):
         h3 = F.relu(self.fc3(z))
@@ -104,7 +106,9 @@ class VAE(nn.Module):
 
     # Reconstruction + KL divergence losses summed over all elements and batch
     def _loss_function(self, recon_x, x, mu, logvar):
-        BCE = F.binary_cross_entropy(recon_x, x.view(-1, self.input_size), reduction='sum')
+        BCE = F.binary_cross_entropy(
+            recon_x, x.view(-1, self.input_size), reduction="sum"
+        )
         # see Appendix B from VAE paper:
         # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
         # https://arxiv.org/abs/1312.6114
@@ -143,4 +147,3 @@ class VAE(nn.Module):
         with torch.no_grad():
             result = self(torch.from_numpy(x_batch).to(self.device))
         return result[0].tolist()
-

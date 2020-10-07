@@ -6,7 +6,8 @@ def loader(x, y, batch_size=64, shuffle=False):
     custom_dataset = CustomDataset(x, y)
 
     loader = torch.utils.data.DataLoader(
-        dataset=custom_dataset, batch_size=batch_size, shuffle=shuffle)
+        dataset=custom_dataset, batch_size=batch_size, shuffle=shuffle
+    )
 
     return loader
 
@@ -21,4 +22,3 @@ class CustomDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.x_set)
-

@@ -17,7 +17,9 @@ class NNGPRegression:
 
         # covariance matrix with regularization
         cov_matrix_train = np.cov(mcd_predictions[:train_len, :], ddof=0)
-        cov_matrix_inv = np.linalg.inv(cov_matrix_train + np.eye(train_len)*self.diag_eps)
+        cov_matrix_inv = np.linalg.inv(
+            cov_matrix_train + np.eye(train_len) * self.diag_eps
+        )
 
         pool_samples = mcd_predictions[train_len:]
         Qs = self.simple_covs(mcd_predictions[:train_len, :], pool_samples).T
@@ -33,7 +35,9 @@ class NNGPRegression:
         mcd_predictions = np.zeros((train_pool_samples.shape[0], self.nn_runs))
         with torch.no_grad():
             for nn_run in range(self.nn_runs):
-                prediction = self.net(train_pool_samples, dropout_rate=self.dropout_rate).to('cpu')
+                prediction = self.net(
+                    train_pool_samples, dropout_rate=self.dropout_rate
+                ).to("cpu")
                 mcd_predictions[:, nn_run] = np.ravel(prediction)
         return mcd_predictions
 
@@ -42,4 +46,3 @@ class NNGPRegression:
         ac = a - a.mean(axis=-1, keepdims=True)
         bc = (b - b.mean(axis=-1, keepdims=True)) / b.shape[-1]
         return np.dot(ac, bc.T).T
-

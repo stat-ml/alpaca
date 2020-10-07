@@ -4,11 +4,12 @@ import torch.nn.functional as F
 
 from torch.hub import load_state_dict_from_url
 from torchvision.models.resnet import ResNet, BasicBlock, conv3x3, conv1x1, Bottleneck
+
 # from torchvision.models.resnet import resnet18
 
 
 model_urls = {
-    'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
+    "resnet18": "https://download.pytorch.org/models/resnet18-5c106cde.pth",
 }
 
 
@@ -60,7 +61,7 @@ class ResNetLinear(ResNet):
 
 
 def resnet_linear(pretrained=False, dropout_rate=0.5, freeze=False):
-    base = resnet18(pretrained=pretrained, mode='linear')
+    base = resnet18(pretrained=pretrained, mode="linear")
     base.dropout_rate = dropout_rate
     base.fc = nn.Linear(512, 512)
     base.fc2 = nn.Linear(512, 256)
@@ -80,14 +81,13 @@ def resnet_masked(pretrained=False):
     return base
 
 
-def _resnet(arch, block, layers, pretrained, progress, mode='masked', **kwargs):
-    if mode == 'masked':
+def _resnet(arch, block, layers, pretrained, progress, mode="masked", **kwargs):
+    if mode == "masked":
         model = ResNetMasked(block, layers, **kwargs)
     else:
         model = ResNetLinear(block, layers, **kwargs)
     if pretrained:
-        state_dict = load_state_dict_from_url(model_urls[arch],
-                                              progress=progress)
+        state_dict = load_state_dict_from_url(model_urls[arch], progress=progress)
         model.load_state_dict(state_dict)
     return model
 
@@ -100,6 +100,4 @@ def resnet18(pretrained=False, progress=True, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _resnet('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress,
-                   **kwargs)
-
+    return _resnet("resnet18", BasicBlock, [2, 2, 2, 2], pretrained, progress, **kwargs)

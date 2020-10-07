@@ -9,15 +9,18 @@ from .downloader import download
 from sklearn.model_selection import train_test_split
 
 
-URL = 'https://archive.ics.uci.edu/ml/machine-learning-databases/00242/ENB2012_data.xlsx'
+URL = (
+    "https://archive.ics.uci.edu/ml/machine-learning-databases/00242/ENB2012_data.xlsx"
+)
 
 
 # TODO: use both output features
 class EnergyEfficiencyData:
     """Load/provides boston housing dataset"""
+
     def __init__(self, use_cache=False, val_split=0.2):
         self.use_cache = use_cache
-        cache_dir = path.join(DATA_DIR, 'dataloader/data/energy_efficiency')
+        cache_dir = path.join(DATA_DIR, "dataloader/data/energy_efficiency")
         self.saver = DataSaver(cache_dir)
         self.val_split = val_split
         self._build_dataset(cache_dir)
@@ -33,12 +36,11 @@ class EnergyEfficiencyData:
         return x, y
 
     def _build_dataset(self, cache_dir):
-        data_path = download(cache_dir, 'energy_efficiencty.xlsx', URL)
+        data_path = download(cache_dir, "energy_efficiencty.xlsx", URL)
         self.df = pd.read_excel(data_path)
         table = self.df.to_numpy()
         if self.val_split != 0:
             train, val = train_test_split(table, test_size=self.val_split, shuffle=True)
         else:
             train, val = table, []
-        self.data = {'train': train, 'val': val}
-
+        self.data = {"train": train, "val": val}

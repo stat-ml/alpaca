@@ -10,7 +10,7 @@ from .saver import DataSaver
 
 class Openml:
     def __init__(self, name, val_size=0.2):
-        cache_dir = path.join(DATA_DIR, f'dataloader/data/{name}')
+        cache_dir = path.join(DATA_DIR, f"dataloader/data/{name}")
         self.saver = DataSaver(cache_dir)
         self.val_size = val_size
         self.name = name
@@ -29,32 +29,33 @@ class Openml:
 
         if self.val_size != 0:
             x_train, x_val, y_train, y_val = train_test_split(
-                x, y, test_size=self.val_size, shuffle=True, stratify=y)
+                x, y, test_size=self.val_size, shuffle=True, stratify=y
+            )
         else:
             x_train, y_train = x, y
             x_val, y_val = [], []
 
         self.data = {
-            'train': (x_train, y_train),
-            'val': (x_val, y_val),
+            "train": (x_train, y_train),
+            "val": (x_val, y_val),
         }
 
 
 class MnistData(Openml):
     def __init__(self, **kwargs):
-        super().__init__('mnist_784', **kwargs)
+        super().__init__("mnist_784", **kwargs)
 
 
 class FashionMnistData(Openml):
     def __init__(self, **kwargs):
-        super().__init__('Fashion-MNIST', **kwargs)
+        super().__init__("Fashion-MNIST", **kwargs)
 
 
 class Cifar10(Openml):
     def __init__(self, **kwargs):
-        super().__init__('CIFAR_10', **kwargs)
+        super().__init__("CIFAR_10", **kwargs)
 
 
 class SVHN(Openml):
     def __init__(self, **kwargs):
-        super().__init__('SVHN', **kwargs)
+        super().__init__("SVHN", **kwargs)
