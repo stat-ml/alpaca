@@ -4,7 +4,14 @@ import torch
 
 from alpaca.utils.functions import corrcoef, mc_probability, cov
 
+__all__ = ["reg_masks"]
+
 reg_masks = {}
+
+
+def register_mask(cls):
+    for key in cls._name_collection:
+        reg_masks[key] = cls.__name__
 
 
 class BaseMask(metaclass=abc.ABCMeta):
@@ -67,6 +74,7 @@ class MaskLayered(BaseMask):
         pass
 
 
+@register_mask
 class BasicBernoulliMask(BaseMask):
     """
     The implementation of Monte Carlo Dropout (MCD) logic
@@ -106,6 +114,7 @@ class BasicBernoulliMask(BaseMask):
         return res
 
 
+@register_mask
 class DecorrelationMask(MaskLayered):
     """
     TODO:

@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
@@ -10,7 +11,9 @@ import alpaca.nn as ann
 
 
 class SimpleConv(nn.Module):
-    def __init__(self, num_classes=10, activation=None, dropout_rate=0.5):
+    def __init__(
+        self, num_classes=10, activation=None, dropout_rate=0.5, dropout_mask=None
+    ):
         if activation is None:
             self.activation = F.leaky_relu
         else:
@@ -20,16 +23,16 @@ class SimpleConv(nn.Module):
         self.conv2 = nn.Conv2d(16, 32, 3)
         self.linear_size = 12 * 12 * 32
         self.fc1 = nn.Linear(self.linear_size, 256)
-        self.dropout = ann.Dropout(dropout_rate)
+        self.dropout = ann.Dropout(dropout_rate, dropout_mask)
         self.fc2 = nn.Linear(256, num_classes)
 
-    def forward(self, x, dropout_mask=None):
+    def forward(self, x):
         x = self.activation(self.conv1(x))
         x = self.activation(self.conv2(x))
         x = F.max_pool2d(x, 2, 2)
         x = x.view(-1, self.linear_size)
         x = self.activation(self.fc1(x))
-        x = self.dropout(x, dropout_mask=dropout_mask, layer_num=0)
+        x = self.dropout(x)
         x = self.fc2(x)
         return x
 
@@ -38,6 +41,16 @@ class SimpleConv(nn.Module):
 def seed():
     torch.manual_seed(123)
     yield
+
+
+@pytest.fixture(scope="function", params=[*np.linspace(0.0, 1.0, 10)])
+def dropout_rate(request):
+    return request.param
+
+
+@pytest.fixture(scope="function", params=[0.0, 1.0])
+def dropout_rate_extreme(request):
+    return request.param
 
 
 @pytest.fixture(
@@ -57,7 +70,7 @@ def mask(request):
     return masks.reg_masks[mask_name]
 
 
-@pytest.fixture(scope="function", params=[("mnist", 10000)])
+@pytest.fixture(scope="module", params=[("mnist", 10000)])
 def dataset(request):
     dataset, val_size = request.param
     dataset = build_dataset(dataset, val_size=val_size)
@@ -89,6 +102,7 @@ def simple_conv(dataset):
         loss = criterion(prediction, y_batch)
         loss.backward()
         optimizer.step()
+        break
 
     x_batch, y_batch = next(iter(val_loader))
     return model, x_batch
