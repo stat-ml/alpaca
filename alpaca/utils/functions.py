@@ -16,7 +16,7 @@ def corrcoef(x: torch.Tensor) -> torch.Tensor:
     torch.Tensor
     """
     mean_x = torch.mean(x, 1)
-    xm = x.sub(mean_x.expand_as(x))
+    xm = x.sub(mean_x[..., None].expand_as(x))
     c = xm.mm(xm.t())
     c = c / (x.size(1) - 1)
     d = torch.diag(c)

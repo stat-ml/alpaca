@@ -45,4 +45,6 @@ def build_model(
                     keys=keys,
                 )
                 model._modules[key][i] = module
+        else:
+            pass
     return model

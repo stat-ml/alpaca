@@ -1,8 +1,6 @@
 from typing import Optional
 import torch.nn as nn
 
-from alpaca.ue.masks import BaseMask
-
 
 class Module:
     """
@@ -13,7 +11,7 @@ class Module:
         self,
         module: nn.Module,
         dropout_rate: float = 0.0,
-        dropout_mask: Optional[BaseMask] = None,
+        dropout_mask: "BaseMask" = None,
     ):
         self.__dict__ = module.__dict__.copy()
         self.dropout_rate = dropout_rate

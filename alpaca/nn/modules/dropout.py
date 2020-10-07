@@ -2,7 +2,6 @@ from typing import Optional
 import torch
 import torch.nn as nn
 
-from alpaca.ue.masks import BaseMask
 from alpaca.nn.modules.module import Module
 
 __all__ = ["Dropout"]
@@ -17,7 +16,7 @@ class Dropout(Module, nn.Dropout):
         self,
         *args,
         dropout_rate: float = 0.0,
-        dropout_mask: Optional[BaseMask] = None,
+        dropout_mask: "BaseMask" = None,
         **kwargs
     ):
         super().__init__(*args, **kwargs)
@@ -33,4 +32,6 @@ class Dropout(Module, nn.Dropout):
                 input, p=self.dropout_rate, inplace=self.inplace
             )
         else:
-            return self.dropout_mask(input, dropout_rate=self.dropout_rate)
+            return input * self.dropout_mask(
+                input, dropout_rate=self.dropout_rate, is_train=self.training
+            )

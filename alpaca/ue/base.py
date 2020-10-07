@@ -3,6 +3,8 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 
+from alpaca.nn.modules.module import Module
+
 
 __all__ = ["UE"]
 
@@ -47,6 +49,9 @@ class UE(metaclass=abc.ABCMeta):
             # evaluate model for the model
             self.net.eval()
 
+        self._masks_collect()
+        self.reset()
+
     @abc.abstractmethod
     def __call__(self, X_pool: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -62,13 +67,6 @@ class UE(metaclass=abc.ABCMeta):
         Tuple[torch.Tensor, torch.Tensor]
         """
         pass
-
-    def reset(self):
-        """
-        Reset dropout mask stats
-        """
-        if self.dropout_mask:
-            self.dropout_mask.reset()
 
     def last_mcd_runs(self):
         """
@@ -94,3 +92,23 @@ class UE(metaclass=abc.ABCMeta):
         Description of the UE algorithm
         """
         return "Uncertainty estimation with {} approach".format(self._name)
+
+    def _masks_collect_helper(self, model):
+        for key, item in model._modules.items():
+            if isinstance(item, Module):
+                self.all_masks.add(item.dropout_mask)
+            elif type(item) == nn.Sequential or type(item) == nn.ModuleList:
+                for i, module in enumerate(item):
+                    self._masks_collect_helper(module)
+
+    def _masks_collect(self):
+        self.all_masks = set()
+        self._masks_collect_helper(self.net)
+
+    def reset(self):
+        """
+        Resets stats of all masks in the model
+        """
+        for item in self.all_masks:
+            if item:
+                item.reset()
