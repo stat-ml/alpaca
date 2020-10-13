@@ -28,17 +28,14 @@ def std(mcd_runs: torch.Tensor):
     return mcd_runs.std(dim=0)
 
 
-"""
-TODO: add logic to handle instance attributes
 @reg_acquisition
-def var_ratio(mcd_runs: torch.Tensor):
+def var_ratio(mcd_runs: torch.Tensor, nn_runs: int):
     predictions = torch.argmax(mcd_runs, axis=-1)
     # count how many time repeats the strongest class
     mode_count = lambda preds: torch.max(torch.bincount(preds))
     modes = [mode_count(point) for point in predictions]
-    ue = 1 - torch.stack(modes) / instance.nn_runs
+    ue = 1 - torch.stack(modes) / nn_runs
     return ue
-"""
 
 
 @reg_acquisition

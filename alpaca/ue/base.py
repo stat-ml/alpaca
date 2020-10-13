@@ -1,4 +1,5 @@
 import abc
+from collections.abc import Iterable
 from typing import Tuple
 import torch
 import torch.nn as nn
@@ -94,12 +95,16 @@ class UE(metaclass=abc.ABCMeta):
         return "Uncertainty estimation with {} approach".format(self._name)
 
     def _masks_collect_helper(self, model):
-        for key, item in model._modules.items():
-            if isinstance(item, Module):
-                self.all_masks.add(item.dropout_mask)
-            elif type(item) == nn.Sequential or type(item) == nn.ModuleList:
-                for i, module in enumerate(item):
-                    self._masks_collect_helper(module)
+        if not isinstance(model, Iterable):
+            model = [model]
+
+        for model_ in model:
+            for key, item in model_._modules.items():
+                if isinstance(item, Module):
+                    self.all_masks.add(item.dropout_mask)
+                elif type(item) == nn.Sequential or type(item) == nn.ModuleList:
+                    for i, module in enumerate(item):
+                        self._masks_collect_helper(module)
 
     def _masks_collect(self):
         self.all_masks = set()

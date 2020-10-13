@@ -1,6 +1,7 @@
 import numpy as np
 from math import log2
 from scipy.stats import percentileofscore
+import torch
 
 
 __all__ = ["get_uq_metrics", "uq_accuracy", "dcg", "ndcg", "uq_ndcg", "uq_ll"]
@@ -65,3 +66,15 @@ def uq_ll(errors, uq):
     errors = np.ravel(errors)
     uq_squared = np.square(np.ravel(uq)) + 1e-10
     return -np.mean(np.log(uq_squared) / 2 + np.square(errors) / 2 / uq_squared)
+
+
+def classification_metric(uncertainties, correct_predictions):
+    accumulation = []
+    uq = uncertainties
+    idx = np.argsort(uq)
+    for fraction in np.arange(0.5, 1.01, 0.01):
+        part_size = int(fraction * len(idx))
+        part = correct_predictions[idx][:part_size]
+        accuracy = torch.true_divide(torch.sum(part), len(part))
+        accumulation.append([fraction, accuracy])
+    return np.array(accumulation).T

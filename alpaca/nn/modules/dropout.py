@@ -27,11 +27,14 @@ class Dropout(Module, nn.Dropout):
         self,
         input: torch.Tensor,
     ) -> torch.Tensor:
-        if self.dropout_mask is None or self.training is True:
+        if self.training:
             return torch.nn.functional.dropout(
                 input, p=self.dropout_rate, inplace=self.inplace
             )
         else:
-            return input * self.dropout_mask(
-                input, dropout_rate=self.dropout_rate, is_train=self.training
-            )
+            if self.uncertainty_mode is True and self.dropout_mask:
+                return input * self.dropout_mask(
+                    input, dropout_rate=self.dropout_rate, is_train=self.training
+                )
+            else:
+                return input

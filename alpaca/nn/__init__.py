@@ -1,1 +1,1 @@
-from .modules import Module, Dropout, Linear
+from .modules import Module, Dropout

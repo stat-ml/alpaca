@@ -5,6 +5,7 @@ from functools import partial
 
 from alpaca.ue.base import UE
 from alpaca.ue import acquisitions
+from alpaca.utils.model_builder import uncertainty_mode, inference_mode
 
 
 __all__ = ["MCDUE"]
@@ -73,6 +74,7 @@ class MCDUE_regression(UE):
                 raise ValueError("The given acquisition strategy doesn't exist")
 
     def __call__(self, X_pool: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        self.net = uncertainty_mode(self.net)
         mcd_runs = None
         with torch.no_grad():
             self.net(X_pool)
@@ -91,6 +93,7 @@ class MCDUE_regression(UE):
         # save `mcf_runs` stats
         if self.keep_runs is True:
             self._mcd_runs = mcd_runs
+        self.net = inference_mode(self.net)
         return predictions, self._acquisition(mcd_runs)
 
 
@@ -138,6 +141,7 @@ class MCDUE_classification(UE):
 
     def __call__(self, X_pool: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         mcd_runs = None
+        self.net = uncertainty_mode(self.net)
         with torch.no_grad():
             self.net(X_pool)
 
@@ -156,4 +160,5 @@ class MCDUE_classification(UE):
         if self.keep_runs is True:
             self._mcd_runs = mcd_runs
 
+        self.net = inference_mode(self.net)
         return predictions, self._acquisition(mcd_runs)

@@ -7,6 +7,10 @@ class Module:
     TODO:
     """
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.uncertainty_mode = False
+
     def instantiate_with_dropout_params(
         self,
         module: nn.Module,
@@ -24,6 +28,14 @@ class Module:
             self.dropout_rate,
             self.dropout_mask.__class__.__name__,
         )
+
+    def ue_mode(self):
+        self.uncertainty_mode = True
+        return self
+
+    def inf_mode(self):
+        self.uncertainty_mode = False
+        return self
 
     # FIXME
     __repr__ = __str__

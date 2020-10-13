@@ -3,6 +3,7 @@ from typing import Union
 import torch
 
 from alpaca.utils.functions import corrcoef, mc_probability, cov
+from dppy.finite_dpps import FiniteDPP
 
 __all__ = ["reg_masks"]
 
@@ -76,6 +77,10 @@ class MaskLayered(BaseMask):
         """
         pass
 
+    def reset(self):
+        self.layer_correlations = None
+        self._init_run = True
+
 
 class BasicBernoulliMask(BaseMask):
     """
@@ -147,7 +152,7 @@ class DecorrelationMask(MaskLayered):
 
         if self._init_run is True and is_train is False:
             self._init_run = False
-            self._init_layers(x, mask_len, k)
+            return self._init_layers(x, mask_len, k)
 
         mask = torch.zeros(mask_len, dtype=x.dtype, device=x.device)
         inds = torch.multinomial(self.layer_correlation, k, replacement=False)
@@ -180,10 +185,6 @@ class DecorrelationMask(MaskLayered):
         # otherwise we won't get right correlations for all layers
         return torch.ones(mask_len, dtype=x.dtype, device=x.device)
 
-    def reset(self):
-        self.layer_correlations = None
-        self._init_run = True
-
 
 class DecorrelationMaskScaled(MaskLayered):
     """
@@ -195,19 +196,6 @@ class DecorrelationMaskScaled(MaskLayered):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.scaling = True
-
-
-class DecorrelationMaskHT(MaskLayered):
-    """
-    TODO:
-    """
-
-    _name_collection = {"ht_decorrelating"}
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.scaling = True
-        self.ht_norm = True
 
 
 class LeverageScoreMask(MaskLayered):
@@ -224,6 +212,7 @@ class LeverageScoreMask(MaskLayered):
         lambda_: int = 1,
         covariance: bool = False,
     ):
+        super().__init__()
         self.ht_norm = ht_norm
         self.lambda_ = lambda_
         self.covariance = covariance
@@ -240,7 +229,7 @@ class LeverageScoreMask(MaskLayered):
 
         if self._init_run is True and is_train is False:
             self._init_run = False
-            self._init_layers(x, mask_len, k)
+            return self._init_layers(x, mask_len, k)
 
         mask = torch.zeros(mask_len, device=x.device)
         ids = torch.multinomial(self.layer_correlations, k, replacement=False)
@@ -273,19 +262,6 @@ class LeverageScoreMask(MaskLayered):
         # otherwise we won't get right correlations for all layers
         return torch.ones(mask_len, device=x.device)
 
-    def reset(self):
-        self.layer_correlations = None
-        self._init_run = True
-
-
-class LeverageScoreMaskHT(LeverageScoreMask):
-    _name_collection = {"ht_leverages"}
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.ht_norm = True
-        self.lambda_ = 1
-
 
 class LeverageScoreMaskCov(LeverageScoreMask):
     _name_collection = {"cov_leverages"}
@@ -295,3 +271,61 @@ class LeverageScoreMaskCov(LeverageScoreMask):
         self.ht_norm = True
         self.lambda_ = 1
         self.covariance = True
+
+
+class DPPMask(MaskLayered):
+    def __init__(self, ht_norm:bool=False, covariance:bool=False):
+        self.ht_norm = ht_norm
+        self.covariance = covariance
+
+    def __call__(
+        self,
+        x: torch.Tensor,
+        dropout_rate: Union[torch.Tensor, float] = 0.5,
+        *,
+        is_train=True,
+    ) -> torch.Tensor:
+        if self._init_run is True and is_train is False:
+            self._init_run = False
+            return self._init_layers(x)
+
+        # sampling nodes ids
+        dpp = self.dpps
+
+        for _ in range(ATTEMPTS):
+            dpp.sample_exact()
+            ids = dpp.list_of_samples[-1]
+            if len(ids):  # We should retry if mask is zero-length
+                break
+
+        mask_len = x.shape[-1]
+        mask = torch.zeros(mask_len).double().cuda()
+        if self.ht_norm:
+            mask[ids] = self.norm[layer_num][ids]
+        else:
+            mask[ids] = mask_len / len(ids)
+
+        return x.data.new(mask)
+
+    def _init_layers(self, x: torch.Tensor, eps:float=1e-12):
+        x += torch.rand(x.shape) * eps
+        if self.covariance:
+            L = cov(x_matrix.transpose(0, 1))
+        else:
+            L = corrcoef(x_matrix.transpose(0, 1))
+
+        self.dpps = FiniteDPP("likelihood", **{"L": L})
+        self.layer_correlations[layer_num] = L
+
+        if self.ht_norm:
+            L = torch.DoubleTensor(L).cuda()
+            I = torch.eye(len(L)).double().cuda()
+            K = torch.mm(L, torch.inverse(L + I))
+
+            self.norm[layer_num] = torch.reciprocal(
+                torch.diag(K)
+            )  # / len(correlations)
+            self.L = L
+            self.K = K
+
+        return x.data.new(x.data.size()[-1]).fill_(1)

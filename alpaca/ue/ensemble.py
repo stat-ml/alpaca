@@ -6,6 +6,7 @@ from functools import partial
 from alpaca.ue.base import UE
 from alpaca.models import Ensemble
 from alpaca.ue import acquisitions
+from alpaca.utils.model_builder import uncertainty_mode, inference_mode
 
 __all__ = ["EnsembleMCDUE"]
 
@@ -45,6 +46,7 @@ class EnsembleMCDUE(UE):
 
     def __call__(self, X_pool: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         mcd_runs = None
+        self.net = uncertainty_mode(self.net)
         with torch.no_grad():
             # Some mask needs first run without dropout, i.e. decorrelation mask
             self.net(X_pool, reduction=self.reduction)
@@ -65,6 +67,7 @@ class EnsembleMCDUE(UE):
         # save `mcf_runs` stats
         if self.keep_runs is True:
             self._mcd_runs = mcd_runs
+        self.net = inference_mode(self.net)
         return predictions, self._acquisition(mcd_runs)
 
     def _create_model_from_list(self):
