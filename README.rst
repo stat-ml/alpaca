@@ -1,16 +1,21 @@
-## Alpaca
-![alpaca_logo](examples/figures/alpaca.png)
+Alpaca
+------
+
+.. image:: ../examples/figures/alpaca.png
 
 Package for active learning and uncertainty quantification in neural nets.
 
-## Installation
+Installation
+------------
 
 You can install the package via pip
-```
-pip install alpaca-ml
-```
 
-## Code examples
+.. code-block:: bash
+
+    pip install alpaca-ml
+
+Code examples
+-------------
 Tutorial are available as example notebooks in `examples` folder.
 
 - [Uncertainty for classification task](examples/classification_uq.ipynb)
