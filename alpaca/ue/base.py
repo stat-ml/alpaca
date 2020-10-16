@@ -18,17 +18,23 @@ class UE(metaclass=abc.ABCMeta):
     ----------
     net: :class:`torch.nn.Module`
         Neural network on based on which we are calculating uncertainty region
-    nn_runs: int
+    nn_runs
         A number of iterations
-    acquisitions: Optional[Union[str, Callable]]
-        Acquisiiton function definition
     keep_runs: bool
         Whenever to save iteration results
 
-    Default attributes
-    ------------------
-    _name : None
-    _default_acquisition : None
+    Examples
+    --------
+
+    >>> # This could be used to create custom
+    >>> # uncertainty estimation strategy
+    >>> class CustomUE(UE):
+    >>>     def __init__(self, ...):
+    >>>         ...
+    >>>     def __call__(self, X_pool: torch.Tensor):
+    >>>         ...
+    >>> estimator = CustomUE(model, ...)
+    >>> predictions, estimations = estimator(x_batch)
     """
 
     _name = None
@@ -38,7 +44,7 @@ class UE(metaclass=abc.ABCMeta):
         self,
         net,
         *,
-        nn_runs: int = 25,
+        nn_runs=25,
         keep_runs: bool = False,
     ):
         # we are keeping list for ensemble estimators
@@ -51,7 +57,7 @@ class UE(metaclass=abc.ABCMeta):
             self.net.eval()
 
         self._masks_collect()
-        self.reset()
+        self._reset()
 
     @abc.abstractmethod
     def __call__(self, X_pool: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -69,9 +75,9 @@ class UE(metaclass=abc.ABCMeta):
         """
         pass
 
-    def last_mcd_runs(self):
+    def last_mcd_runs(self) -> torch.Tensor:
         """
-        Return model prediction for last uncertainty estimation
+        Return model prediction for the last uncertainty estimation
         """
         if not self.keep_runs:
             raise ValueError(
@@ -88,10 +94,7 @@ class UE(metaclass=abc.ABCMeta):
         return None
 
     @property
-    def desc(self):
-        """
-        Description of the UE algorithm
-        """
+    def desc(self) -> str:
         return "Uncertainty estimation with {} approach".format(self._name)
 
     def _masks_collect_helper(self, model):
@@ -110,10 +113,7 @@ class UE(metaclass=abc.ABCMeta):
         self.all_masks = set()
         self._masks_collect_helper(self.net)
 
-    def reset(self):
-        """
-        Resets stats of all masks in the model
-        """
+    def _reset(self):
         for item in self.all_masks:
             if item:
                 item.reset()

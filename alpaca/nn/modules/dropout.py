@@ -9,7 +9,15 @@ __all__ = ["Dropout"]
 
 class Dropout(Module, nn.Dropout):
     """
-    The subclass of nn.Dropout layer with the additional `dropout_mask` and `dropout_rate` parameterization
+    The subclass of nn.Dropout layer with the additional
+    `dropout_mask` and `dropout_rate` parameterization
+
+    Parameters
+    ----------
+    dropout_rate :  float
+        Dropout rate of the mask
+    dropout_mask : "BaseMask"
+        Base mask instance setting the type of mask of the module
     """
 
     def __init__(

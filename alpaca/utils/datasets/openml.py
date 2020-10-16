@@ -44,10 +44,7 @@ class Openml:
 class MnistData(Openml):
     def __init__(self, **kwargs):
         super().__init__("mnist_784", **kwargs)
-<<<<<<< HEAD:alpaca/utils/datasets/openml.py
         self.x_shape = (-1, 1, 28, 28)
-=======
->>>>>>> master:alpaca/dataloader/openml.py
 
 
 class FashionMnistData(Openml):

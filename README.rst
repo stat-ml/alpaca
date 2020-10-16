@@ -1,7 +1,7 @@
-Alpaca
-------
+alpaca
+======
 
-.. image:: ../examples/figures/alpaca.png
+.. image:: ../images/alpaca.png
 
 Package for active learning and uncertainty quantification in neural nets.
 

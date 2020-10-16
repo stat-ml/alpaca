@@ -12,27 +12,30 @@ __all__ = ["MCDUE"]
 
 
 class MCDUE:
-    """
+    r"""
     MCDUE constructor. Depending on the provided `num_classes` argument, the
-    constructor will initialize `MCDUE_regression` or `MCDUE_classification` classes.
+    constructor will initialize **MCDUE_regression** or **MCDUE_classification** classes.
 
     Other Parameters
     ----------------
     num_classes : int
         Integer that sets the number of classes for prediction
 
-    Example
-    -------
-    MCDUE for classification task with 10 classes
+    Examples
+    --------
+
+    >>> import alpaca
+    >>> model : nn.Module = ... # define a torch nn.Model
+    >>> model = train_model(...) # train the model
     >>> estimator = MCDUE(model, nn_runs=100, num_classes=10)
-    MCDUE for regression task
-    >>> estimator = MCDUE(model, nn_runs=100)
+    >>> predictions, estimations = estimator(x_batch)
+
     """
 
     _name = "MCDUE"
     _default_acquisition = None
 
-    def __new__(cls, *args, num_classes: int = 0, **kwargs):
+    def __new__(cls, *args, num_classes=0, **kwargs):
         if num_classes == 0:
             return MCDUE_regression(*args, **kwargs)
         elif num_classes > 0:
@@ -108,7 +111,7 @@ class MCDUE_classification(UE):
 
     Parameters
     ----------
-    num_classes: int
+    num_classes
         Integer that sets the number of classes for prediction
     """
 
@@ -118,7 +121,7 @@ class MCDUE_classification(UE):
     def __init__(
         self,
         *args,
-        num_classes: int,
+        num_classes,
         acquisition: Optional[Union[str, Callable]] = None,
         **kwargs
     ):

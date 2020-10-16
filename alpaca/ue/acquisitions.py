@@ -66,5 +66,5 @@ def _bald(logits):
     predictions = torch.softmax(logits, dim=-1)
     predictive_entropy = _entropy(torch.mean(predictions, dim=1))
     expected_entropy = torch.mean(_entropy(predictions), dim=1)
-    res = (predictive_entropy - expected_entropy)
+    res = predictive_entropy - expected_entropy
     return res

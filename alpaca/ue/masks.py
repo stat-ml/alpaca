@@ -274,7 +274,7 @@ class LeverageScoreMaskCov(LeverageScoreMask):
 
 
 class DPPMask(MaskLayered):
-    def __init__(self, ht_norm:bool=False, covariance:bool=False):
+    def __init__(self, ht_norm: bool = False, covariance: bool = False):
         self.ht_norm = ht_norm
         self.covariance = covariance
 
@@ -307,7 +307,7 @@ class DPPMask(MaskLayered):
 
         return x.data.new(mask)
 
-    def _init_layers(self, x: torch.Tensor, eps:float=1e-12):
+    def _init_layers(self, x: torch.Tensor, eps: float = 1e-12):
         x += torch.rand(x.shape) * eps
         if self.covariance:
             L = cov(x_matrix.transpose(0, 1))

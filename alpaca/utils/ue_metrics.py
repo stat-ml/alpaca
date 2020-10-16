@@ -66,7 +66,6 @@ def uq_ll(errors, uq):
     errors = np.ravel(errors)
     uq_squared = np.square(np.ravel(uq)) + 1e-10
     return -np.mean(np.log(uq_squared) / 2 + np.square(errors) / 2 / uq_squared)
-<<<<<<< HEAD:alpaca/utils/ue_metrics.py
 
 
 def classification_metric(uncertainties, correct_predictions):
@@ -79,5 +78,3 @@ def classification_metric(uncertainties, correct_predictions):
         accuracy = torch.true_divide(torch.sum(part), len(part))
         accumulation.append([fraction, accuracy])
     return np.array(accumulation).T
-=======
->>>>>>> master:alpaca/analysis/metrics.py
