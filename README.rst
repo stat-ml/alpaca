@@ -1,7 +1,7 @@
 alpaca
 ======
 
-.. image:: ../images/alpaca.png
+.. image:: https://raw.githubusercontent.com/stat-ml/alpaca/master/images/alpaca.png
 
 Package for active learning and uncertainty quantification in neural nets.
 
