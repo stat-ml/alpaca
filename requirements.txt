@@ -1,5 +1,13 @@
-# matplotlib>=3.0.0
-# torch>=1.1.0
-# xlrd>=1.2.0
-requests>=2.22.0
+
+black
+pytest
+pylint
+pytest-html
+pydocstyle
+matplotlib
+requests
+tqdm
+scikit-learn
 dppy>=0.2.0
+pandas
+torch
