@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?><testsuite errors="1" failures="0" name="pytest" skipped="0" tests="1" time="0.202"><testcase classname="" file="tests/test_ue.py" name="tests.test_ue" time="0.000"><error message="collection failure">ImportError while importing test module &apos;/home/rasul/Desktop/forks/alpaca/alpaca_fork/tests/test_ue.py&apos;.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-tests/test_ue.py:2: in &lt;module&gt;
-    from alpaca.ue import MCDUE, Bald
-E   ImportError: cannot import name &apos;Bald&apos; from &apos;alpaca.ue&apos; (/home/rasul/Desktop/forks/alpaca/alpaca_fork/alpaca/ue/__init__.py)</error></testcase></testsuite>

@@ -2,6 +2,9 @@ import torch
 
 
 class Ensemble:
+    """
+        TODO: Add docs
+    """
     def __init__(self, modules):
         self.modules = modules
         self.reduction = None

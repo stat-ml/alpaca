@@ -173,7 +173,7 @@ class DecorrelationMask(MaskLayered):
             scores = (
                 4.0 * scores / torch.max(scores)
             )  # TODO: remove hard coding or annotate
-        self.layer_correlation = torch.nn.functional.softmax(scores)
+        self.layer_correlation = torch.nn.functional.softmax(scores, dim=-1)
 
         if self.ht_norm:
             # Horvitz-Thopson normalization (1 / marginal_prob for each element)
