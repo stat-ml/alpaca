@@ -17,6 +17,7 @@ API
    nn
    masks
    acquisitions
+   metrics
 
 Indices and tables
 ==================

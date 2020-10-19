@@ -69,6 +69,9 @@ def uq_ll(errors, uq):
 
 
 def classification_metric(uncertainties, correct_predictions):
+    """
+    Classification metric
+    """
     accumulation = []
     uq = uncertainties
     idx = np.argsort(uq)
