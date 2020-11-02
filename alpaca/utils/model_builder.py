@@ -8,8 +8,8 @@ from alpaca.models import Ensemble
 
 def build_model(
     model,
-    dropout_rate: float = 0.0,
-    dropout_mask: Optional[BaseMask] = None,
+    dropout_rate,
+    dropout_mask,
     *,
     keys: Optional[List[str]] = None,
 ):
@@ -42,8 +42,8 @@ def build_model(
                 continue
             model._modules[key] = item.instantiate_with_dropout_params(
                 item,
-                dropout_rate=dropout_rate,
-                dropout_mask=dropout_mask.copy() if dropout_mask else None,
+                dropout_rate=dropout_rate[key],
+                dropout_mask=dropout_mask[key].copy() if dropout_mask else None,
             )
         elif type(item) == nn.Sequential or type(item) == nn.ModuleList:
             for i, module in enumerate(item):

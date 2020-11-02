@@ -11,7 +11,7 @@ from alpaca.utils.model_builder import uncertainty_mode, inference_mode
 __all__ = ["EnsembleMCDUE"]
 
 
-class EnsembleMCDUE(UE):
+class Ensemble(UE):
     """
     Estimate uncertainty for samples with Ensemble and MCDUE approach
     """
