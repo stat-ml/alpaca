@@ -10,4 +10,4 @@ scikit-learn
 dppy>=0.2.0
 pandas
 torch
-git+https://github.com/stat-ml/alpaca
+git+https://github.com/stat-ml/alpaca@1884a32
