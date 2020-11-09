@@ -28,7 +28,7 @@ class NavalPropulsionData:
             return self.saver.load(label)
 
         data = self.data[label]
-        x, y = data[:, :-2], data[:, -1:]
+        x, y = data[:, :-2], data[:, -2:-1]
         self.saver.save(x, y, label)
         return x, y
 
