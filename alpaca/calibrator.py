@@ -19,10 +19,11 @@ def _split_into_bins(n_bins, probs, labels):
     for j in range(len(labels)):
         max_p = max(probs[j])
         for i in range(n_bins):
-            if i / n_bins < max_p and max_p <= (i + 1) / n_bins:
+            if (i / n_bins) < max_p <= (i + 1) / n_bins:
                 bins[i].append((probs[j]))
                 true_labels_for_bins[i].append(labels[j])
-    return np.array(bins), np.array(true_labels_for_bins)
+
+    return bins, true_labels_for_bins
 
 
 def compute_ece(n_bins, probs, labels, len_dataset):
