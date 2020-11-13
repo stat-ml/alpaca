@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Union
 import torch.nn as nn
 
 from alpaca.ue.masks import BaseMask
@@ -8,8 +8,8 @@ from alpaca.models import Ensemble
 
 def build_model(
     model,
-    dropout_rate,
-    dropout_mask,
+    dropout_rate: Union[List[float], float] = 0.0,
+    dropout_mask: Optional[Union[List[BaseMask], BaseMask]] = None,
     *,
     keys: Optional[List[str]] = None,
 ):
@@ -21,9 +21,9 @@ def build_model(
     ----------
     model: nn.Module
         The model which modules should be parametrized
-    dropout_rate: float = 0.0
+    dropout_rate: Any[List[float], float] = 0.0
         The dropout rate parameterization
-    dropout_mask: Optional[BaseMask] None
+    dropout_mask: Optional[Any[List[BaseMask], BaseMask]] = None
         The dropout_mask parameterization
     keys: Optional[List[str]] = None
         The keys of the modules in the model which should be parametrized
@@ -36,15 +36,32 @@ def build_model(
             )
         return model
 
+    index_dropout = 0
+
     for key, item in model._modules.items():
         if isinstance(item, Module):
             if keys and key not in keys:
                 continue
+            if isinstance(dropout_rate, list) and index_dropout >= len(dropout_rate):
+                raise ValueError(
+                    "Model contains more stochastic layers than it is provided"
+                )
+            if dropout_mask:
+                mask = (
+                    dropout_mask
+                    if not isinstance(dropout_mask, list)
+                    else dropout_mask[index_dropout]
+                )
+            else:
+                mask = None
             model._modules[key] = item.instantiate_with_dropout_params(
                 item,
-                dropout_rate=dropout_rate[key],
-                dropout_mask=dropout_mask[key].copy() if dropout_mask else None,
+                dropout_rate=dropout_rate
+                if not isinstance(dropout_rate, list)
+                else dropout_rate[index_dropout],
+                dropout_mask=mask,
             )
+            index_dropout += 1
         elif type(item) == nn.Sequential or type(item) == nn.ModuleList:
             for i, module in enumerate(item):
                 module = build_model(
