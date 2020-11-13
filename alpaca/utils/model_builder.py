@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from alpaca.ue.masks import BaseMask
 from alpaca.nn.modules.module import Module
-from alpaca.models import Ensemble
+from alpaca.models import EnsembleConstructor
 
 
 def build_model(
@@ -29,7 +29,7 @@ def build_model(
         The keys of the modules in the model which should be parametrized
     """
 
-    if isinstance(model, Ensemble):
+    if isinstance(model, EnsembleConstructor):
         for i, _ in enumerate(model.modules):
             model.modules[i] = build_model(
                 _, dropout_rate=dropout_rate, dropout_mask=dropout_mask, keys=keys
@@ -77,7 +77,7 @@ def build_model(
 
 
 def uncertainty_mode(model: nn.Module):
-    if isinstance(model, Ensemble):
+    if isinstance(model, EnsembleConstructor):
         for i, _ in enumerate(model.modules):
             model.modules[i] = uncertainty_mode(_)
         return model
@@ -95,7 +95,7 @@ def uncertainty_mode(model: nn.Module):
 
 
 def inference_mode(model: nn.Module):
-    if isinstance(model, Ensemble):
+    if isinstance(model, EnsembleConstructor):
         for i, _ in enumerate(model.modules):
             model.modules[i] = inference_mode(_)
         return model
