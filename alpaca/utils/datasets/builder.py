@@ -9,7 +9,10 @@ from .red_wine import RedWineData
 from .yacht_hydrodynamics import YachtHydrodynamicsData
 from .year_prediction_msd import YearPredictionMSDData
 from .openml import MnistData, FashionMnistData, Cifar10, SVHN
-
+from .fb_comment import FBCommentData
+from .superconduct import SuperconductData
+from .bike_sharing import BikeSharingHourData
+from .ailerons import AileronsData
 
 DATASETS = {
     "boston_housing": BostonHousingData,
@@ -26,6 +29,10 @@ DATASETS = {
     "fashion_mnist": FashionMnistData,
     "cifar_10": Cifar10,
     "svhn": SVHN,
+    "fb_comment": FBCommentData,
+    "superconduct": SuperconductData,
+    "bike_sharing": BikeSharingHourData,
+    "ailerons": AileronsData,
 }
 
 
