@@ -157,7 +157,6 @@ class ModelWithTempScaling(nn.Module):
 
 
 class ModelWithVectScaling(nn.Module):
-
     """
     A wrapper for a model with vector scaling
 
