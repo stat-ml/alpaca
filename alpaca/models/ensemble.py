@@ -1,7 +1,7 @@
 import torch
 
 
-class Ensemble:
+class EnsembleConstructor:
     """
     TODO: Add docs
     """

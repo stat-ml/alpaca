@@ -4,7 +4,7 @@ from tqdm import tqdm
 from functools import partial
 
 from alpaca.ue.base import UE
-from alpaca.models import Ensemble
+from alpaca.models import EnsembleConstructor
 from alpaca.ue import acquisitions
 from alpaca.utils.model_builder import uncertainty_mode, inference_mode
 
@@ -71,5 +71,5 @@ class Ensemble(UE):
         return predictions, self._acquisition(mcd_runs)
 
     def _create_model_from_list(self):
-        self.net = Ensemble(self.net)
+        self.net = EnsembleConstructor(self.net)
         self.net.eval()
