@@ -13,6 +13,7 @@ from .fb_comment import FBCommentData
 from .superconduct import SuperconductData
 from .bike_sharing import BikeSharingHourData
 from .ailerons import AileronsData
+from .sgemm_gpu import SGEMMGPUData
 
 DATASETS = {
     "boston_housing": BostonHousingData,
@@ -33,6 +34,7 @@ DATASETS = {
     "superconduct": SuperconductData,
     "bike_sharing": BikeSharingHourData,
     "ailerons": AileronsData,
+    "sgemm_gpu": SGEMMGPUData
 }
 
 
