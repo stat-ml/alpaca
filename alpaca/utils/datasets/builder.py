@@ -14,6 +14,7 @@ from .superconduct import SuperconductData
 from .bike_sharing import BikeSharingHourData
 from .ailerons import AileronsData
 from .sgemm_gpu import SGEMMGPUData
+from .ct_slices import CTSlicesData
 
 DATASETS = {
     "boston_housing": BostonHousingData,
@@ -34,7 +35,8 @@ DATASETS = {
     "superconduct": SuperconductData,
     "bike_sharing": BikeSharingHourData,
     "ailerons": AileronsData,
-    "sgemm_gpu": SGEMMGPUData
+    "sgemm_gpu": SGEMMGPUData,
+    "ct_slices": CTSlicesData
 }
 
 
